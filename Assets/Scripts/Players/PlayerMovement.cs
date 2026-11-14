@@ -5,7 +5,7 @@ namespace GameJam
 {
     /// <summary>
     /// Top-down movement shared by all players. Reads the "Move" action of the player's PlayerInput and feeds it to the
-    /// shared <see cref="MovementPhysics"/> (acceleration, sliding, turning, braking) - see the Players Config asset to tune it.
+    /// shared <see cref="MovementPhysics"/> (acceleration, drift steering, braking) - see the Players Config asset to tune it.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D), typeof(PlayerInput))]
     public class PlayerMovement : MonoBehaviour
@@ -14,6 +14,9 @@ namespace GameJam
 
         // Replaced by the shared settings in Configure; the defaults only cover a movement that was never configured.
         MovementPhysics physics = new MovementPhysics();
+
+        // This character's own steering state (its heading); the settings above are shared, this is not.
+        MovementPhysics.State motion;
 
         /// <summary>Multiplier on the top speed from the character's power-ups (1 = none, 1.3 = Speed Boost).</summary>
         public float SpeedMultiplier { get; set; } = 1f;
@@ -54,6 +57,7 @@ namespace GameJam
             transform.SetPositionAndRotation(position, Quaternion.identity);
             body.position = position;
             body.linearVelocity = Vector2.zero;
+            motion.Reset();
             Physics2D.SyncTransforms();
         }
 
@@ -62,6 +66,7 @@ namespace GameJam
             if (!MovementEnabled)
             {
                 body.linearVelocity = Vector2.zero;
+                motion.Reset();
                 return;
             }
 
@@ -71,7 +76,7 @@ namespace GameJam
 
             // Start from the velocity physics actually left us with: a wall has already removed the speed into it, so
             // the character slides along walls and never "stores up" momentum against them.
-            body.linearVelocity = physics.Step(body.linearVelocity, input, Time.fixedDeltaTime, SpeedMultiplier);
+            body.linearVelocity = physics.Step(ref motion, body.linearVelocity, input, Time.fixedDeltaTime, SpeedMultiplier);
         }
     }
 }

@@ -1725,7 +1725,7 @@ MonoBehaviour:
   powerUps: {fileID: 1232924777}
   maxRounds: 4
   endOnTimeUp: 1
-  roundDuration: 10
+  roundDuration: 20
   endOnCoverage: 1
   coverageEndPercent: 90
   startOnAwake: 1
@@ -3805,7 +3805,7 @@ MonoBehaviour:
   territory: {fileID: 371507327}
   recordInterval: 0
   ghostTint: {r: 1, g: 1, b: 1, a: 1}
-  ghostTintAmount: 0.35
+  ghostTintAmount: 0.585
   ghostAlpha: 0.5
   ghostSortingOrderOffset: -1
   hideGhostWhenPathEnds: 1

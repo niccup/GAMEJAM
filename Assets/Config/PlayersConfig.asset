@@ -14,12 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameJam.PlayersConfig
   playerPrefab: {fileID: 7930081570972185890, guid: e10e93266b39b4693bd4031ef7a03596, type: 3}
   movement:
-    maxSpeed: 2
-    acceleration: 10
-    deceleration: 7
-    turningResponsiveness: 6.5
-    inertia: 0.562
-    brakingStrength: 14
+    maxSpeed: 5
+    acceleration: 3
+    deceleration: 4
+    brakingStrength: 4
+    steeringResponsiveness: 14
+    turningSpeed: 900
+    directionChangeResponsiveness: 0.5
+    driftStrength: 1
+    lateralMomentumRetention: 0.3
+    speedRetentionDuringTurns: 0.95
     minimumMovementSpeed: 0.05
     scaleWithSpeedBoost: 1
   slots:
