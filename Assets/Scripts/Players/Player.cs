@@ -34,7 +34,6 @@ namespace GameJam
         }
 
         readonly List<PlayerModifier> modifiers = new List<PlayerModifier>();
-        float baseSpeed;
 
         /// <summary>Power-ups of the player's current character (won for this round only; ghosts keep their own copies).</summary>
         public IReadOnlyList<PlayerModifier> Modifiers => modifiers;
@@ -66,7 +65,7 @@ namespace GameJam
         void RefreshStats()
         {
             Stats = PlayerStats.From(modifiers);
-            GetComponent<PlayerMovement>().Speed = baseSpeed * Stats.SpeedMultiplier;
+            GetComponent<PlayerMovement>().SpeedMultiplier = Stats.SpeedMultiplier;
         }
 
         public void Initialize(int index, PlayersConfig config)
@@ -84,7 +83,7 @@ namespace GameJam
                 spriteRenderer.color = slot.color;
             }
 
-            baseSpeed = config.moveSpeed;
+            GetComponent<PlayerMovement>().Configure(config.movement);
             RefreshStats();
         }
     }

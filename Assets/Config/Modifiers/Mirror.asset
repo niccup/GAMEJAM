@@ -16,4 +16,4 @@ MonoBehaviour:
   description: Permanently mirror the movement of one ghost of any player
   icon: {fileID: -3342743851459327484, guid: f73e4400624474ab1b843b20e9fabc40, type: 3}
   postMirrorPreview: 1
-  previewSpeed: 50
+  previewSpeed: 30

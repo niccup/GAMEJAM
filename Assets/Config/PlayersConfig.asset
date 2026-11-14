@@ -13,7 +13,15 @@ MonoBehaviour:
   m_Name: PlayersConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameJam.PlayersConfig
   playerPrefab: {fileID: 7930081570972185890, guid: e10e93266b39b4693bd4031ef7a03596, type: 3}
-  moveSpeed: 2
+  movement:
+    maxSpeed: 2
+    acceleration: 10
+    deceleration: 7
+    turningResponsiveness: 18
+    inertia: 0.4
+    brakingStrength: 14
+    minimumMovementSpeed: 0.05
+    scaleWithSpeedBoost: 1
   slots:
   - controlScheme: Keyboard
     color: {r: 0.93, g: 0.3, b: 0.3, a: 1}

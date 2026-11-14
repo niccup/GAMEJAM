@@ -25,9 +25,10 @@ namespace GameJam
         [Tooltip("Prefab instantiated for every player. Replace it to change visuals/colliders.")]
         public Player playerPrefab;
 
-        [Tooltip("Player movement speed in world units per second.")]
-        [Range(0.5f, 10f)]
-        public float moveSpeed = 2.5f;
+        [Header("Movement")]
+        [Tooltip("How all players move: top speed, acceleration, sliding, turning, braking. Shared by every player and " +
+                 "applied live, so you can tune the feel while the game is running.")]
+        public MovementPhysics movement = new MovementPhysics();
 
         [Tooltip("One entry per player (up to 4).")]
         public PlayerSlot[] slots = new PlayerSlot[MaxPlayers];
