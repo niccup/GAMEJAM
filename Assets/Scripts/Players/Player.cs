@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -32,6 +33,42 @@ namespace GameJam
             set => GetComponent<PlayerMovement>().MovementEnabled = value;
         }
 
+        readonly List<PlayerModifier> modifiers = new List<PlayerModifier>();
+        float baseSpeed;
+
+        /// <summary>Power-ups of the player's current character (won for this round only; ghosts keep their own copies).</summary>
+        public IReadOnlyList<PlayerModifier> Modifiers => modifiers;
+
+        /// <summary>Current stats with all modifiers applied.</summary>
+        public PlayerStats Stats { get; private set; } = PlayerStats.Default;
+
+        public bool HasModifier(PlayerModifier modifier) => modifiers.Contains(modifier);
+
+        /// <summary>
+        /// Gives the player a modifier and applies its effect right away. Returns false if nothing changed
+        /// (null, or an already owned modifier that is not stackable).
+        /// </summary>
+        public bool AddModifier(PlayerModifier modifier)
+        {
+            if (modifier == null || (!modifier.Stackable && modifiers.Contains(modifier))) return false;
+            modifiers.Add(modifier);
+            RefreshStats();
+            return true;
+        }
+
+        /// <summary>Removes all modifiers and restores the normal speed (between rounds).</summary>
+        public void ClearModifiers()
+        {
+            modifiers.Clear();
+            RefreshStats();
+        }
+
+        void RefreshStats()
+        {
+            Stats = PlayerStats.From(modifiers);
+            GetComponent<PlayerMovement>().Speed = baseSpeed * Stats.SpeedMultiplier;
+        }
+
         public void Initialize(int index, PlayersConfig config)
         {
             Index = index;
@@ -47,7 +84,8 @@ namespace GameJam
                 spriteRenderer.color = slot.color;
             }
 
-            GetComponent<PlayerMovement>().Speed = config.moveSpeed;
+            baseSpeed = config.moveSpeed;
+            RefreshStats();
         }
     }
 }

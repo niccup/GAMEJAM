@@ -172,6 +172,7 @@ namespace GameJam.Editor
             EnsureOverlayTitle(overlay);
             EnsureReplay(round, territory, spawner);
             ScoreManager scores = EnsureScores(round, spawner, overlay);
+            EnsurePowerUps(round, spawner, overlay);
 
             var timer = Object.FindFirstObjectByType<RoundTimerDisplay>();
             if (timer == null)
@@ -243,6 +244,143 @@ namespace GameJam.Editor
                 overlaySO.ApplyModifiedPropertiesWithoutUndo();
             }
             return scores;
+        }
+
+        // Power-up contest between rounds: the Speed Boost asset, its selection screen and the logic that runs after "Next Round".
+        static void EnsurePowerUps(RoundManager round, PlayerSpawner spawner, RoundEndOverlay roundOverlay)
+        {
+            EnsureFolder(ConfigDir + "/Modifiers");
+            EnsureFolder(ArtDir + "/Modifiers");
+
+            Sprite boltIcon = EnsureBoltSprite(ArtDir + "/Modifiers/SpeedBoost.png", 128);
+            var speedBoost = EnsureAsset<SpeedBoostModifier>(ConfigDir + "/Modifiers/SpeedBoost.asset", m =>
+            {
+                var so = new SerializedObject(m);
+                so.FindProperty("displayName").stringValue = "Speed Boost";
+                so.FindProperty("description").stringValue = "+30% movement speed for the next round";
+                so.FindProperty("icon").objectReferenceValue = boltIcon;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            });
+
+            var view = Object.FindFirstObjectByType<PowerUpOverlay>();
+            if (view == null)
+            {
+                view = Undo.AddComponent<PowerUpOverlay>(roundOverlay.gameObject);
+                BuildPowerUpPanel(view, boltIcon);
+            }
+
+            var selection = Object.FindFirstObjectByType<PowerUpSelection>();
+            if (selection == null)
+            {
+                var go = new GameObject("PowerUps");
+                Undo.RegisterCreatedObjectUndo(go, "Create PowerUps");
+                selection = go.AddComponent<PowerUpSelection>();
+            }
+            var selectionSO = new SerializedObject(selection);
+            selectionSO.FindProperty("spawner").objectReferenceValue = spawner;
+            selectionSO.FindProperty("overlay").objectReferenceValue = view;
+            SerializedProperty pool = selectionSO.FindProperty("pool");
+            if (pool.arraySize == 0)
+            {
+                pool.arraySize = 1;
+                pool.GetArrayElementAtIndex(0).objectReferenceValue = speedBoost;
+            }
+            selectionSO.ApplyModifiedPropertiesWithoutUndo();
+
+            var roundSO = new SerializedObject(round);
+            roundSO.FindProperty("powerUps").objectReferenceValue = selection;
+            roundSO.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void BuildPowerUpPanel(PowerUpOverlay view, Sprite icon)
+        {
+            var panel = new GameObject("PowerUpPanel", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            panel.transform.SetParent(view.transform, false);
+            Stretch(panel.GetComponent<RectTransform>());
+            panel.GetComponent<UnityEngine.UI.Image>().color = new Color(0f, 0f, 0f, 0.75f);
+
+            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            iconGo.transform.SetParent(panel.transform, false);
+            var iconRt = iconGo.GetComponent<RectTransform>();
+            iconRt.anchorMin = iconRt.anchorMax = iconRt.pivot = new Vector2(0.5f, 0.5f);
+            iconRt.anchoredPosition = new Vector2(0f, 90f);
+            iconRt.sizeDelta = new Vector2(280f, 280f);
+            var iconImage = iconGo.GetComponent<UnityEngine.UI.Image>();
+            iconImage.sprite = icon;
+            iconImage.raycastTarget = false;
+
+            TMP_Text name = CenteredLabel("NameLabel", panel.transform, "Speed Boost", 80, new Vector2(0f, -110f), new Vector2(1200f, 110f));
+            TMP_Text description = CenteredLabel("DescriptionLabel", panel.transform, "", 40, new Vector2(0f, -200f), new Vector2(1400f, 70f));
+            TMP_Text prompt = CenteredLabel("PromptLabel", panel.transform, "", 52, new Vector2(0f, -300f), new Vector2(1400f, 90f));
+            prompt.color = new Color(1f, 0.9f, 0.3f);
+
+            var so = new SerializedObject(view);
+            so.FindProperty("panel").objectReferenceValue = panel;
+            so.FindProperty("iconImage").objectReferenceValue = iconImage;
+            so.FindProperty("nameLabel").objectReferenceValue = name;
+            so.FindProperty("descriptionLabel").objectReferenceValue = description;
+            so.FindProperty("promptLabel").objectReferenceValue = prompt;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            panel.SetActive(false);
+        }
+
+        static TMP_Text CenteredLabel(string name, Transform parent, string text, float size, Vector2 position, Vector2 sizeDelta)
+        {
+            TMP_Text label = CreateText(name, parent, text, size, TextAlignmentOptions.Center);
+            label.raycastTarget = false;
+            RectTransform rt = label.rectTransform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = position;
+            rt.sizeDelta = sizeDelta;
+            return label;
+        }
+
+        // Placeholder power-up icon: a yellow lightning bolt on a dark disc. Replace the PNG with real art any time.
+        static Sprite EnsureBoltSprite(string path, int size)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null) return existing;
+
+            Vector2[] bolt =
+            {
+                new Vector2(0.60f, 0.92f), new Vector2(0.24f, 0.48f), new Vector2(0.46f, 0.48f),
+                new Vector2(0.38f, 0.08f), new Vector2(0.76f, 0.56f), new Vector2(0.53f, 0.56f),
+            };
+
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float r = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                var p = new Vector2((x + 0.5f) / size, (y + 0.5f) / size);
+                Color c = Color.clear;
+                if (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r)) <= r) c = new Color(0.12f, 0.14f, 0.2f);
+                if (InsidePolygon(p, bolt)) c = new Color(1f, 0.85f, 0.2f);
+                tex.SetPixel(x, y, c);
+            }
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+
+            AssetDatabase.ImportAsset(path);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spritePixelsPerUnit = size;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        static bool InsidePolygon(Vector2 point, Vector2[] polygon)
+        {
+            bool inside = false;
+            for (int i = 0, j = polygon.Length - 1; i < polygon.Length; j = i++)
+            {
+                Vector2 a = polygon[i], b = polygon[j];
+                if ((a.y > point.y) != (b.y > point.y) && point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x)
+                    inside = !inside;
+            }
+            return inside;
         }
 
         // "Round 2 / 4" / "Final Results" heading above the Next Round button.

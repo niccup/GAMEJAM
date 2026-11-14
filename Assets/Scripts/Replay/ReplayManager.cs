@@ -121,7 +121,7 @@ namespace GameJam
             if (current[player.Index] != null) return current[player.Index];
             if (player.TrailEmitter == null) return null;
 
-            var recording = new MovementRecording();
+            var recording = new MovementRecording(player.Modifiers); // snapshot: the ghost keeps what the player had in this round
             recording.Add(0f, player.transform.position, player.TrailEmitter.Emitting);
             return current[player.Index] = recording;
         }

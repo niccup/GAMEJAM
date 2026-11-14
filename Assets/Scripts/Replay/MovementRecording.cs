@@ -20,6 +20,18 @@ namespace GameJam
 
         readonly List<Sample> samples = new List<Sample>();
 
+        /// <summary>
+        /// The modifiers the character carried while this was recorded (a snapshot: modifiers won in later rounds are
+        /// not added). The samples are stored against real round time, so a character that moved faster because of a
+        /// Speed Boost is replayed at exactly that pace - no speed has to be re-applied on playback.
+        /// </summary>
+        public IReadOnlyList<PlayerModifier> Modifiers { get; }
+
+        public MovementRecording(IEnumerable<PlayerModifier> modifiers = null)
+        {
+            Modifiers = modifiers == null ? System.Array.Empty<PlayerModifier>() : new List<PlayerModifier>(modifiers).AsReadOnly();
+        }
+
         public int SampleCount => samples.Count;
 
         /// <summary>Time of the last sample = how long the recording lasts.</summary>

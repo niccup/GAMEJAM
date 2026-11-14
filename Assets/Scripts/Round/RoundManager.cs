@@ -24,6 +24,8 @@ namespace GameJam
         [SerializeField] RoundEndOverlay overlay;
         [Tooltip("Provides the scores the end-of-round screen shows. Required for the overlay.")]
         [SerializeField] ScoreManager scores;
+        [Tooltip("Optional. When set (together with Scores), 'Next Round' first offers a power-up to the loser of the round and the round starts once they take it. When empty, Next Round starts the round directly.")]
+        [SerializeField] PowerUpSelection powerUps;
 
         [Header("Game")]
         [Tooltip("Number of consecutive rounds the game consists of. After the last one the final results are shown and no new round starts.")]
@@ -85,12 +87,42 @@ namespace GameJam
 
         void OnEnable()
         {
-            if (overlay != null) overlay.NextRoundRequested += StartRound;
+            if (overlay != null) overlay.NextRoundRequested += OnNextRoundRequested;
         }
 
         void OnDisable()
         {
-            if (overlay != null) overlay.NextRoundRequested -= StartRound;
+            if (overlay != null) overlay.NextRoundRequested -= OnNextRoundRequested;
+        }
+
+        // "Next Round" does not start the round itself: the power-up offer comes first. It goes to the loser of the round
+        // that just ended (smallest share of that map, ties -> lower player number) and the round starts as soon as they
+        // take it, so the power-up is in place before the recording and ghost snapshot of the new round are made.
+        // Power-ups last one round only: the characters start without the previous round's ones. The finished round's
+        // recording already holds its own snapshot, so its ghost keeps the boost it had.
+        void OnNextRoundRequested()
+        {
+            if (State == RoundState.Playing || IsGameFinished) return;
+            if (powerUps != null && powerUps.IsActive) return;
+
+            spawner.ClearModifiers();
+
+            Player loser = null;
+            if (powerUps != null && scores != null)
+            {
+                int loserIndex = scores.GetCurrentMapLoser();
+                foreach (Player player in spawner.Players)
+                    if (player.Index == loserIndex) loser = player;
+            }
+
+            if (loser == null)
+            {
+                StartRound();
+                return;
+            }
+
+            if (overlay != null) overlay.Hide();
+            powerUps.Begin(loser, StartRound);
         }
 
         void Start()

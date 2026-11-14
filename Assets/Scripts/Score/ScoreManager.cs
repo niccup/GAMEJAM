@@ -96,6 +96,28 @@ namespace GameJam
             return leaders;
         }
 
+        /// <summary>
+        /// The active player with the smallest share of the current map (not the cumulative score). On equal shares the
+        /// lower player number is the loser.
+        /// </summary>
+        public int GetCurrentMapLoser()
+        {
+            int loser = 0;
+            float worst = float.PositiveInfinity;
+            int active = ActivePlayerCount;
+
+            for (int i = 0; i < active; i++)
+            {
+                float percent = GetCurrentMapPercent(i);
+                if (percent < worst - tiePercentTolerance)
+                {
+                    worst = percent;
+                    loser = i;
+                }
+            }
+            return loser;
+        }
+
         void OnRoundEnded(RoundEndReason reason)
         {
             // The coverage is final at this point. Store every player's share of the map for this round.

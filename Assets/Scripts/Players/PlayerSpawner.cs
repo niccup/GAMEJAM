@@ -73,6 +73,12 @@ namespace GameJam
             }
         }
 
+        /// <summary>Removes the modifiers (power-ups) of every player's current character. Ghosts keep their own recorded ones.</summary>
+        public void ClearModifiers()
+        {
+            foreach (Player player in players) player.ClearModifiers();
+        }
+
         /// <summary>Lets all players move (true) or freezes them in place (false).</summary>
         public void SetPlayersMovable(bool movable)
         {

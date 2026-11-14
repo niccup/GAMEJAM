@@ -15,6 +15,12 @@ namespace GameJam
         bool hideWhenFinished;
 
         public int PlayerIndex { get; private set; }
+
+        /// <summary>The power-ups the character had when this path was recorded.</summary>
+        public System.Collections.Generic.IReadOnlyList<PlayerModifier> Modifiers => recording.Modifiers;
+
+        /// <summary>The stats those power-ups give (e.g. a Speed Boost shows up as a higher speed multiplier).</summary>
+        public PlayerStats Stats => PlayerStats.From(recording.Modifiers);
         public TrailEmitter TrailEmitter { get; private set; }
 
         /// <summary>True once the round clock has passed the end of the recorded path.</summary>
