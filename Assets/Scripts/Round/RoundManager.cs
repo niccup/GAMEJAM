@@ -122,7 +122,7 @@ namespace GameJam
             }
 
             if (overlay != null) overlay.Hide();
-            powerUps.Begin(loser, StartRound);
+            powerUps.Begin(new[] { loser }, StartRound);
         }
 
         void Start()

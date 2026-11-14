@@ -53,6 +53,19 @@ namespace GameJam
         /// <summary>Number of saved previous rounds of a player (= ghosts that player gets in the next round).</summary>
         public int GetSavedRoundCount(int player) => history[player].Count;
 
+        /// <summary>One saved round of a player (0-based, oldest first). This is what their ghost G{index + 1} replays.</summary>
+        public MovementRecording GetRecording(int player, int index) => history[player][index];
+
+        /// <summary>
+        /// Swaps a saved recording for another one (e.g. its mirrored version). From the next round on the ghost replays the
+        /// new one, so the replacement has to be the final movement - ghosts never transform anything while replaying.
+        /// </summary>
+        public void ReplaceRecording(int player, int index, MovementRecording recording)
+        {
+            if (recording == null) return;
+            history[player][index] = recording;
+        }
+
         void Awake()
         {
             for (int i = 0; i < history.Length; i++) history[i] = new List<MovementRecording>();

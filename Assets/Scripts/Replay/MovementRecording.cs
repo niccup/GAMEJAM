@@ -32,7 +32,58 @@ namespace GameJam
             Modifiers = modifiers == null ? System.Array.Empty<PlayerModifier>() : new List<PlayerModifier>(modifiers).AsReadOnly();
         }
 
+        /// <summary>True for a recording produced by <see cref="CreateMirrored"/>. Its samples are the stored, final movement.</summary>
+        public bool IsMirrored { get; private set; }
+
         public int SampleCount => samples.Count;
+
+        /// <summary>Reads one stored sample (0-based). Returns false if the index is out of range.</summary>
+        public bool TryGetSample(int index, out float time, out Vector2 position, out bool emitting)
+        {
+            time = 0f;
+            position = default;
+            emitting = false;
+            if (index < 0 || index >= samples.Count) return false;
+
+            Sample sample = samples[index];
+            time = sample.Time;
+            position = sample.Position;
+            emitting = sample.Emitting;
+            return true;
+        }
+
+        /// <summary>
+        /// A new recording with the movement directions mirrored by the corner the path starts in (the first sample), as
+        /// seen from <paramref name="mapCenter"/>:
+        /// top-left and bottom-right start - right &lt;-&gt; down and left &lt;-&gt; up;
+        /// top-right and bottom-left start - right &lt;-&gt; up and left &lt;-&gt; down.
+        /// Only the directions change: every sample keeps its time, so the timing, the sequence and the speed (also a
+        /// Speed Boost) stay as recorded, and the carried <see cref="Modifiers"/> are kept. Each recorded step is turned
+        /// and then walked from the start point, and like a character the path slides along the arena edge instead of
+        /// leaving it: <paramref name="limits"/> are the half extents around <paramref name="mapCenter"/> the centre may reach.
+        /// The result is stored as it is and is the baseline from then on - do not mirror it again. The source is not changed.
+        /// </summary>
+        public MovementRecording CreateMirrored(Vector2 mapCenter, Vector2 limits)
+        {
+            var result = new MovementRecording(Modifiers) { IsMirrored = true };
+            if (samples.Count == 0) return result;
+
+            Vector2 start = samples[0].Position;
+            Vector2 fromCenter = start - mapCenter;
+            bool swapAxes = fromCenter.x * fromCenter.y > 0f; // top-right or bottom-left corner
+
+            result.samples.Add(samples[0]);
+            Vector2 position = start;
+            for (int i = 1; i < samples.Count; i++)
+            {
+                Vector2 step = samples[i].Position - samples[i - 1].Position;
+                position += swapAxes ? new Vector2(step.y, step.x) : new Vector2(-step.y, -step.x);
+                position.x = Mathf.Clamp(position.x, mapCenter.x - limits.x, mapCenter.x + limits.x);
+                position.y = Mathf.Clamp(position.y, mapCenter.y - limits.y, mapCenter.y + limits.y);
+                result.samples.Add(new Sample { Time = samples[i].Time, Position = position, Emitting = samples[i].Emitting });
+            }
+            return result;
+        }
 
         /// <summary>Time of the last sample = how long the recording lasts.</summary>
         public float Duration => samples.Count == 0 ? 0f : samples[samples.Count - 1].Time;

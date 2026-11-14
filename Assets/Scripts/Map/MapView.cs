@@ -26,6 +26,9 @@ namespace GameJam
         public Vector2 Size => config != null ? config.size : Vector2.one;
         public float CornerRadius => config != null ? config.cornerRadius : 0f;
         public Vector2 Center => transform.position;
+        /// <summary>The renderer of the map background (null before the map is built).</summary>
+        public SpriteRenderer Background => background;
+
         public Bounds WorldBounds => new Bounds(transform.position, new Vector3(Size.x, Size.y, 0f));
 
         void Awake() => Rebuild();

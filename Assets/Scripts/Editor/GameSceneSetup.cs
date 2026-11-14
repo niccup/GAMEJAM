@@ -246,7 +246,7 @@ namespace GameJam.Editor
             return scores;
         }
 
-        // Power-up contest between rounds: the Speed Boost asset, its selection screen and the logic that runs after "Next Round".
+        // Power-up selection between rounds: the Speed Boost and Mirror assets, the selection screen and the logic that runs after "Next Round".
         static void EnsurePowerUps(RoundManager round, PlayerSpawner spawner, RoundEndOverlay roundOverlay)
         {
             EnsureFolder(ConfigDir + "/Modifiers");
@@ -262,11 +262,24 @@ namespace GameJam.Editor
                 so.ApplyModifiedPropertiesWithoutUndo();
             });
 
-            var view = Object.FindFirstObjectByType<PowerUpOverlay>();
-            if (view == null)
+            Sprite mirrorIcon = EnsureMirrorSprite(ArtDir + "/Modifiers/Mirror.png", 128);
+            var mirror = EnsureAsset<MirrorPowerUp>(ConfigDir + "/Modifiers/Mirror.asset", m =>
             {
-                view = Undo.AddComponent<PowerUpOverlay>(roundOverlay.gameObject);
-                BuildPowerUpPanel(view, boltIcon);
+                var so = new SerializedObject(m);
+                so.FindProperty("displayName").stringValue = "Mirror";
+                so.FindProperty("description").stringValue = "Permanently mirror the movement of one ghost of any player";
+                so.FindProperty("icon").objectReferenceValue = mirrorIcon;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            });
+
+            // The selection screen. An older version of the panel (without the options row) is replaced.
+            var view = Object.FindFirstObjectByType<PowerUpOverlay>();
+            if (view == null) view = Undo.AddComponent<PowerUpOverlay>(roundOverlay.gameObject);
+            var viewSO = new SerializedObject(view);
+            if (viewSO.FindProperty("optionTemplate").objectReferenceValue == null)
+            {
+                if (viewSO.FindProperty("panel").objectReferenceValue is GameObject oldPanel) Undo.DestroyObjectImmediate(oldPanel);
+                BuildPowerUpPanel(view);
             }
 
             var selection = Object.FindFirstObjectByType<PowerUpSelection>();
@@ -278,13 +291,12 @@ namespace GameJam.Editor
             }
             var selectionSO = new SerializedObject(selection);
             selectionSO.FindProperty("spawner").objectReferenceValue = spawner;
+            selectionSO.FindProperty("map").objectReferenceValue = Object.FindFirstObjectByType<MapView>();
+            selectionSO.FindProperty("replay").objectReferenceValue = Object.FindFirstObjectByType<ReplayManager>();
+            selectionSO.FindProperty("territory").objectReferenceValue = Object.FindFirstObjectByType<TerritorySystem>();
             selectionSO.FindProperty("overlay").objectReferenceValue = view;
-            SerializedProperty pool = selectionSO.FindProperty("pool");
-            if (pool.arraySize == 0)
-            {
-                pool.arraySize = 1;
-                pool.GetArrayElementAtIndex(0).objectReferenceValue = speedBoost;
-            }
+            AddToPool(selectionSO.FindProperty("pool"), speedBoost);
+            AddToPool(selectionSO.FindProperty("pool"), mirror);
             selectionSO.ApplyModifiedPropertiesWithoutUndo();
 
             var roundSO = new SerializedObject(round);
@@ -292,48 +304,120 @@ namespace GameJam.Editor
             roundSO.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static void BuildPowerUpPanel(PowerUpOverlay view, Sprite icon)
+        static void AddToPool(SerializedProperty pool, PowerUp powerUp)
         {
-            var panel = new GameObject("PowerUpPanel", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            for (int i = 0; i < pool.arraySize; i++)
+                if (pool.GetArrayElementAtIndex(i).objectReferenceValue == powerUp) return;
+
+            pool.arraySize++;
+            pool.GetArrayElementAtIndex(pool.arraySize - 1).objectReferenceValue = powerUp;
+        }
+
+        // Selection screen: a dimmer, a title bar at the top, a hint bar at the bottom and the (inactive) option template.
+        // The bars are narrow so the map and its corner spawn points stay visible during the Mirror steps.
+        static void BuildPowerUpPanel(PowerUpOverlay view)
+        {
+            var panel = new GameObject("PowerUpPanel", typeof(RectTransform));
             panel.transform.SetParent(view.transform, false);
             Stretch(panel.GetComponent<RectTransform>());
-            panel.GetComponent<UnityEngine.UI.Image>().color = new Color(0f, 0f, 0f, 0.75f);
 
-            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(UnityEngine.UI.Image));
-            iconGo.transform.SetParent(panel.transform, false);
-            var iconRt = iconGo.GetComponent<RectTransform>();
-            iconRt.anchorMin = iconRt.anchorMax = iconRt.pivot = new Vector2(0.5f, 0.5f);
-            iconRt.anchoredPosition = new Vector2(0f, 90f);
-            iconRt.sizeDelta = new Vector2(280f, 280f);
-            var iconImage = iconGo.GetComponent<UnityEngine.UI.Image>();
-            iconImage.sprite = icon;
-            iconImage.raycastTarget = false;
+            var dimmer = new GameObject("Dimmer", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            dimmer.transform.SetParent(panel.transform, false);
+            Stretch(dimmer.GetComponent<RectTransform>());
+            var dimmerImage = dimmer.GetComponent<UnityEngine.UI.Image>();
+            dimmerImage.color = new Color(0f, 0f, 0f, 0.75f);
+            dimmerImage.raycastTarget = false;
 
-            TMP_Text name = CenteredLabel("NameLabel", panel.transform, "Speed Boost", 80, new Vector2(0f, -110f), new Vector2(1200f, 110f));
-            TMP_Text description = CenteredLabel("DescriptionLabel", panel.transform, "", 40, new Vector2(0f, -200f), new Vector2(1400f, 70f));
-            TMP_Text prompt = CenteredLabel("PromptLabel", panel.transform, "", 52, new Vector2(0f, -300f), new Vector2(1400f, 90f));
-            prompt.color = new Color(1f, 0.9f, 0.3f);
+            TMP_Text title = CreateBar("TitleBar", "TitleLabel", panel.transform, 52, new Vector2(0.5f, 1f), new Vector2(0f, -110f), new Vector2(1250f, 84f));
+            TMP_Text hint = CreateBar("HintBar", "HintLabel", panel.transform, 34, new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(1250f, 64f));
+
+            var options = new GameObject("Options", typeof(RectTransform));
+            options.transform.SetParent(panel.transform, false);
+            var optionsRt = options.GetComponent<RectTransform>();
+            optionsRt.anchorMin = optionsRt.anchorMax = optionsRt.pivot = new Vector2(0.5f, 0.5f);
+            optionsRt.anchoredPosition = Vector2.zero;
+            optionsRt.sizeDelta = Vector2.zero;
+
+            PowerUpOptionView template = BuildOptionTemplate(optionsRt);
 
             var so = new SerializedObject(view);
             so.FindProperty("panel").objectReferenceValue = panel;
-            so.FindProperty("iconImage").objectReferenceValue = iconImage;
-            so.FindProperty("nameLabel").objectReferenceValue = name;
-            so.FindProperty("descriptionLabel").objectReferenceValue = description;
-            so.FindProperty("promptLabel").objectReferenceValue = prompt;
+            so.FindProperty("dimmer").objectReferenceValue = dimmer;
+            so.FindProperty("titleLabel").objectReferenceValue = title;
+            so.FindProperty("hintLabel").objectReferenceValue = hint;
+            so.FindProperty("optionsRoot").objectReferenceValue = optionsRt;
+            so.FindProperty("optionTemplate").objectReferenceValue = template;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             panel.SetActive(false);
         }
 
-        static TMP_Text CenteredLabel(string name, Transform parent, string text, float size, Vector2 position, Vector2 sizeDelta)
+        static TMP_Text CreateBar(string barName, string labelName, Transform parent, float fontSize, Vector2 anchor, Vector2 position, Vector2 size)
         {
-            TMP_Text label = CreateText(name, parent, text, size, TextAlignmentOptions.Center);
-            label.raycastTarget = false;
-            RectTransform rt = label.rectTransform;
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            var bar = new GameObject(barName, typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            bar.transform.SetParent(parent, false);
+            var rt = bar.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
             rt.anchoredPosition = position;
-            rt.sizeDelta = sizeDelta;
+            rt.sizeDelta = size;
+            var image = bar.GetComponent<UnityEngine.UI.Image>();
+            image.color = new Color(0f, 0f, 0f, 0.6f);
+            image.raycastTarget = false;
+
+            TMP_Text label = CreateText(labelName, bar.transform, "", fontSize, TextAlignmentOptions.Center);
+            label.raycastTarget = false;
+            Stretch(label.rectTransform);
             return label;
+        }
+
+        // One option card (also used scaled down as a chip): background, icon at the top, title and a short detail text below.
+        static PowerUpOptionView BuildOptionTemplate(RectTransform parent)
+        {
+            var card = new GameObject("OptionTemplate", typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(PowerUpOptionView));
+            card.transform.SetParent(parent, false);
+            var rt = card.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(440f, 300f);
+            var background = card.GetComponent<UnityEngine.UI.Image>();
+            background.raycastTarget = false;
+
+            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            iconGo.transform.SetParent(card.transform, false);
+            var iconRt = iconGo.GetComponent<RectTransform>();
+            iconRt.anchorMin = iconRt.anchorMax = iconRt.pivot = new Vector2(0.5f, 1f);
+            iconRt.anchoredPosition = new Vector2(0f, -16f);
+            iconRt.sizeDelta = new Vector2(120f, 120f);
+            var icon = iconGo.GetComponent<UnityEngine.UI.Image>();
+            icon.raycastTarget = false;
+
+            TMP_Text title = CreateText("Title", card.transform, "Title", 44, TextAlignmentOptions.Center);
+            title.raycastTarget = false;
+            RectTransform titleRt = title.rectTransform;
+            titleRt.anchorMin = new Vector2(0f, 0f);
+            titleRt.anchorMax = new Vector2(1f, 0f);
+            titleRt.pivot = new Vector2(0.5f, 0f);
+            titleRt.anchoredPosition = new Vector2(0f, 110f);
+            titleRt.sizeDelta = new Vector2(-20f, 56f);
+
+            TMP_Text detail = CreateText("Detail", card.transform, "", 26, TextAlignmentOptions.Top);
+            detail.raycastTarget = false;
+            RectTransform detailRt = detail.rectTransform;
+            detailRt.anchorMin = new Vector2(0f, 0f);
+            detailRt.anchorMax = new Vector2(1f, 0f);
+            detailRt.pivot = new Vector2(0.5f, 0f);
+            detailRt.anchoredPosition = new Vector2(0f, 14f);
+            detailRt.sizeDelta = new Vector2(-30f, 90f);
+
+            var view = card.GetComponent<PowerUpOptionView>();
+            var so = new SerializedObject(view);
+            so.FindProperty("background").objectReferenceValue = background;
+            so.FindProperty("iconImage").objectReferenceValue = icon;
+            so.FindProperty("titleLabel").objectReferenceValue = title;
+            so.FindProperty("detailLabel").objectReferenceValue = detail;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            card.SetActive(false);
+            return view;
         }
 
         // Placeholder power-up icon: a yellow lightning bolt on a dark disc. Replace the PNG with real art any time.
@@ -357,6 +441,39 @@ namespace GameJam.Editor
                 Color c = Color.clear;
                 if (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r)) <= r) c = new Color(0.12f, 0.14f, 0.2f);
                 if (InsidePolygon(p, bolt)) c = new Color(1f, 0.85f, 0.2f);
+                tex.SetPixel(x, y, c);
+            }
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+
+            AssetDatabase.ImportAsset(path);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spritePixelsPerUnit = size;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        // Placeholder Mirror icon: two cyan triangles reflected across a white diagonal, on a dark disc.
+        static Sprite EnsureMirrorSprite(string path, int size)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null) return existing;
+
+            Vector2[] upperLeft = { new Vector2(0.2f, 0.45f), new Vector2(0.2f, 0.8f), new Vector2(0.55f, 0.8f) };
+            Vector2[] lowerRight = { new Vector2(0.45f, 0.2f), new Vector2(0.8f, 0.2f), new Vector2(0.8f, 0.55f) }; // the first one reflected across y = x
+
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float r = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                var p = new Vector2((x + 0.5f) / size, (y + 0.5f) / size);
+                Color c = Color.clear;
+                if (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r)) <= r) c = new Color(0.12f, 0.14f, 0.2f);
+                if (InsidePolygon(p, upperLeft) || InsidePolygon(p, lowerRight)) c = new Color(0.4f, 0.85f, 1f);
+                if (Mathf.Abs(p.x - p.y) < 0.02f && p.x > 0.12f && p.x < 0.88f) c = Color.white;
                 tex.SetPixel(x, y, c);
             }
             File.WriteAllBytes(path, tex.EncodeToPNG());

@@ -27,6 +27,9 @@ namespace GameJam
         readonly List<Source> sources = new List<Source>();
         readonly HashSet<TrailEmitter> registered = new HashSet<TrailEmitter>();
 
+        /// <summary>The tuning (cell size, loop length, opacity ...) the territory runs with.</summary>
+        public TerritoryConfig Config => config;
+
         public TerritoryEngine Engine { get; private set; }
         public TerritoryGrid Grid { get; private set; }
         public TerritoryPalette Palette { get; private set; }
