@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameJam.PlayersConfig
   playerPrefab: {fileID: 7930081570972185890, guid: e10e93266b39b4693bd4031ef7a03596, type: 3}
   movement:
-    maxSpeed: 5
-    acceleration: 3
+    maxSpeed: 3.5
+    acceleration: 2
     deceleration: 4
     brakingStrength: 4
     steeringResponsiveness: 14
@@ -39,7 +39,7 @@ MonoBehaviour:
   - controlScheme: Gamepad
     color: {r: 0.95, g: 0.8, b: 0.3, a: 1}
     spriteOverride: {fileID: 0}
-  keyboardTestMode: 1
+  keyboardTestMode: 0
   keyboardTestSchemes:
   - Keyboard
   - KeyboardArrows
