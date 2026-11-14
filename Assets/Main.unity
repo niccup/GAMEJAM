@@ -3369,6 +3369,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7a974d469531546188e679443350dff3, type: 2}
   - {fileID: 11400000, guid: 58d5c91a0dfc34e2aa5d7e7094ed597a, type: 2}
   - {fileID: 11400000, guid: c3973ab29113749618dce273584e128c, type: 2}
+  - {fileID: 11400000, guid: d792a920420924597a83c6dccee59e26, type: 2}
   actionName: Action
   moveActionName: Move
   inputDelay: 0.15

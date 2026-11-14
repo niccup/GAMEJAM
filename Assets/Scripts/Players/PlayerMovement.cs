@@ -18,6 +18,12 @@ namespace GameJam
         // This character's own steering state (its heading); the settings above are shared, this is not.
         MovementPhysics.State motion;
 
+        // A shove from another player's ability, while one is in progress.
+        Knockback knockback;
+
+        // The velocity this movement set in the last physics step, i.e. before whatever the next collision did to it.
+        Vector2 lastVelocity;
+
         /// <summary>Multiplier on the top speed from the character's power-ups (1 = none, 1.3 = Speed Boost).</summary>
         public float SpeedMultiplier { get; set; } = 1f;
 
@@ -26,6 +32,12 @@ namespace GameJam
 
         /// <summary>While false the player ignores input and stands still (e.g. between rounds): it stops at once, it does not slide.</summary>
         public bool MovementEnabled { get; set; } = true;
+
+        /// <summary>True while a knockback (see <see cref="ApplyKnockback"/>) is still shoving this character.</summary>
+        public bool IsKnockedBack => knockback.Active;
+
+        /// <summary>The velocity this character moved with just before the latest collision (the last one its own movement set).</summary>
+        public Vector2 LastVelocity => lastVelocity;
 
         Rigidbody2D body;
         PlayerInput playerInput;
@@ -57,16 +69,34 @@ namespace GameJam
             transform.SetPositionAndRotation(position, Quaternion.identity);
             body.position = position;
             body.linearVelocity = Vector2.zero;
+            lastVelocity = Vector2.zero;
             motion.Reset();
+            knockback.Cancel();
             Physics2D.SyncTransforms();
         }
+
+        /// <summary>
+        /// Shoves the character: it builds up to <paramref name="velocity"/> over <paramref name="rampIn"/> seconds and the shove
+        /// wears off over <paramref name="duration"/> seconds into normal movement (see <see cref="Knockback"/>). A knockback
+        /// that is already running is restarted. Whatever it does to the character's velocity is recorded for its ghost like any other movement.
+        /// </summary>
+        public void ApplyKnockback(Vector2 velocity, float duration, float rampIn)
+        {
+            if (!MovementEnabled) return;
+            knockback.Begin(velocity, lastVelocity, duration, rampIn);
+        }
+
+        /// <summary>Puts back the velocity this character had before the latest collision (undoes the recoil physics gave it).</summary>
+        public void RestoreVelocity() => body.linearVelocity = lastVelocity;
 
         void FixedUpdate()
         {
             if (!MovementEnabled)
             {
                 body.linearVelocity = Vector2.zero;
+                lastVelocity = Vector2.zero;
                 motion.Reset();
+                knockback.Cancel();
                 return;
             }
 
@@ -76,7 +106,9 @@ namespace GameJam
 
             // Start from the velocity physics actually left us with: a wall has already removed the speed into it, so
             // the character slides along walls and never "stores up" momentum against them.
-            body.linearVelocity = physics.Step(ref motion, body.linearVelocity, input, Time.fixedDeltaTime, SpeedMultiplier);
+            // While a knockback runs it shapes the velocity (and calls the normal movement for the character's own part).
+            lastVelocity = knockback.Step(physics, ref motion, body.linearVelocity, input, Time.fixedDeltaTime, SpeedMultiplier);
+            body.linearVelocity = lastVelocity;
         }
     }
 }
