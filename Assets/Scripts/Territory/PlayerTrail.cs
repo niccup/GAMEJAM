@@ -60,6 +60,14 @@ namespace GameJam
             return touchedOwnTrail;
         }
 
+        /// <summary>Forgets all progress (position, travelled distance, territory contact). The grid itself is not touched.</summary>
+        public void Reset()
+        {
+            hasLastPosition = false;
+            travelled = 0f;
+            lastTerritoryContact = float.NegativeInfinity;
+        }
+
         /// <summary>Forget the last position, e.g. after a teleport or pause, so no line is drawn across the jump.</summary>
         public void BreakPath() => hasLastPosition = false;
 

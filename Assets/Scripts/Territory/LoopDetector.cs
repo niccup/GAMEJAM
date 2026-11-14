@@ -28,9 +28,10 @@ namespace GameJam
         }
 
         /// <summary>
-        /// Fills <paramref name="result"/> with the enclosed cells that are not yet the player's territory.
-        /// Cells that already belong to the player (for example pockets holding another player's trail) are skipped,
-        /// so an old pocket never counts as a new capture. Returns the number of cells (0 = nothing to capture).
+        /// Fills <paramref name="result"/> with the enclosed cells that have to change when the loop is captured:
+        /// cells that are not yet the player's territory (free cells and other players' territory alike, since a loop
+        /// takes over everything inside it) and cells covered by another player's trail (which gets removed).
+        /// Returns the number of cells (0 = nothing to capture).
         /// </summary>
         public int FindLoopCells(int player, List<int> result)
         {
@@ -63,7 +64,8 @@ namespace GameJam
             for (int i = 0; i < reachable.Length; i++)
             {
                 bool enclosed = !reachable[i] && grid.GetColorOwner(i) != player;
-                if (enclosed && grid.GetOwner(i) != player) result.Add(i);
+                // A cell showing another player's trail always counts, even over our own territory: the trail must go.
+                if (enclosed && (grid.GetOwner(i) != player || grid.GetTrailOwner(i) != TerritoryGrid.None)) result.Add(i);
             }
 
             return result.Count;

@@ -20,6 +20,9 @@ namespace GameJam
 
         public IReadOnlyList<Player> Players => players;
 
+        /// <summary>The players configuration (slot colors etc.).</summary>
+        public PlayersConfig Config => config;
+
         /// <summary>Raised once a new player is fully initialized (color, index, input).</summary>
         public event System.Action<Player> PlayerSpawned;
 
@@ -58,6 +61,22 @@ namespace GameJam
             players.Add(player);
             PlayerSpawned?.Invoke(player);
             return player;
+        }
+
+        /// <summary>Moves every player back to its spawn point and stops it. Colors, input and settings stay as they are.</summary>
+        public void ResetPlayers()
+        {
+            foreach (Player player in players)
+            {
+                Transform point = map.GetSpawnPoint(player.Index);
+                if (point != null) player.ResetTo(point.position);
+            }
+        }
+
+        /// <summary>Lets all players move (true) or freezes them in place (false).</summary>
+        public void SetPlayersMovable(bool movable)
+        {
+            foreach (Player player in players) player.MovementEnabled = movable;
         }
 
         void WarnIfRadiusMismatch(int index)

@@ -22,6 +22,9 @@ namespace GameJam
         public TerritoryGrid Grid { get; private set; }
         public TerritoryPalette Palette { get; private set; }
 
+        /// <summary>While false the territory is frozen: trails are not laid and no loops can close (e.g. between rounds).</summary>
+        public bool Running { get; set; } = true;
+
         /// <summary>Raised when a player closes a loop: (player index, cells captured).</summary>
         public event Action<int, int> LoopClosed;
 
@@ -42,6 +45,9 @@ namespace GameJam
 
         void OnDisable() => spawner.PlayerSpawned -= Register;
 
+        /// <summary>Wipes all territory and trails (new round).</summary>
+        public void ResetTerritory() => Engine.Reset();
+
         void Register(Player player)
         {
             if (players.Contains(player)) return;
@@ -58,6 +64,8 @@ namespace GameJam
         // LateUpdate: players move in physics and are interpolated, so their final position for the frame is known here.
         void LateUpdate()
         {
+            if (!Running) return;
+
             foreach (Player player in players)
             {
                 TrailEmitter emitter = player.TrailEmitter;

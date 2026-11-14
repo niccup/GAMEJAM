@@ -98,6 +98,14 @@ namespace GameJam
             Version++;
         }
 
+        /// <summary>Removes the trail (any player's) from one cell.</summary>
+        public void ClearTrail(int index)
+        {
+            if (trailOwner[index] == None) return;
+            trailOwner[index] = None;
+            Version++;
+        }
+
         /// <summary>
         /// Turns every trail cell of a player into territory of the same player. Nothing disappears: the cells keep
         /// their color, they just stop being "trail" (so other players' trails no longer interrupt them).
@@ -115,6 +123,18 @@ namespace GameJam
             }
             if (converted > 0) Version++;
             return converted;
+        }
+
+        /// <summary>Empties the whole grid: no territory, no trails. Used to start a new round.</summary>
+        public void Clear()
+        {
+            for (int i = 0; i < owner.Length; i++)
+            {
+                owner[i] = trailOwner[i] = None;
+                trailDistance[i] = 0f;
+            }
+            System.Array.Clear(ownedCount, 0, ownedCount.Length);
+            Version++;
         }
 
         /// <summary>Removes every trail cell of one player without capturing them (e.g. if a player is eliminated). Returns how many were removed.</summary>

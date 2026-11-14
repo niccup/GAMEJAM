@@ -20,6 +20,15 @@ namespace GameJam
         /// <summary>The circle that draws this player's trail. A separate child object, independent of the sprite.</summary>
         public TrailEmitter TrailEmitter => trailEmitter != null ? trailEmitter : (trailEmitter = GetComponentInChildren<TrailEmitter>());
 
+        /// <summary>Puts the player back at a position and stops it.</summary>
+        public void ResetTo(Vector3 position) => GetComponent<PlayerMovement>().TeleportTo(position);
+
+        public bool MovementEnabled
+        {
+            get => GetComponent<PlayerMovement>().MovementEnabled;
+            set => GetComponent<PlayerMovement>().MovementEnabled = value;
+        }
+
         public void Initialize(int index, PlayersConfig config)
         {
             Index = index;

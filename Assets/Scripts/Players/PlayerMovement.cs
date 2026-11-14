@@ -11,6 +11,9 @@ namespace GameJam
 
         public float Speed { get; set; } = 5f;
 
+        /// <summary>While false the player ignores input and stands still (e.g. between rounds).</summary>
+        public bool MovementEnabled { get; set; } = true;
+
         Rigidbody2D body;
         PlayerInput playerInput;
         InputAction move;
@@ -29,11 +32,20 @@ namespace GameJam
             body.sharedMaterial = new PhysicsMaterial2D("PlayerNoFriction") { friction = 0f, bounciness = 0f };
         }
 
+        /// <summary>Teleports the player and stops it.</summary>
+        public void TeleportTo(Vector3 position)
+        {
+            transform.SetPositionAndRotation(position, Quaternion.identity);
+            body.position = position;
+            body.linearVelocity = Vector2.zero;
+            Physics2D.SyncTransforms();
+        }
+
         void FixedUpdate()
         {
             // PlayerInput clones its actions on enable, so look the action up lazily.
             move ??= playerInput.actions?.FindAction(MoveActionName);
-            Vector2 direction = move != null ? move.ReadValue<Vector2>() : Vector2.zero;
+            Vector2 direction = MovementEnabled && move != null ? move.ReadValue<Vector2>() : Vector2.zero;
             body.linearVelocity = Vector2.ClampMagnitude(direction, 1f) * Speed;
         }
     }

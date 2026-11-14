@@ -2,8 +2,12 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using TMPro;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace GameJam.Editor
 {
@@ -83,7 +87,8 @@ namespace GameJam.Editor
             spawnerSO.FindProperty("config").objectReferenceValue = playersConfig;
             spawnerSO.ApplyModifiedPropertiesWithoutUndo();
 
-            SetupTerritory(map, spawner, territoryConfig);
+            TerritorySystem territory = SetupTerritory(map, spawner, territoryConfig);
+            SetupRound(territory, spawner);
 
             Camera cam = Camera.main;
             if (cam != null)
@@ -103,7 +108,7 @@ namespace GameJam.Editor
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         }
 
-        static void SetupTerritory(MapView map, PlayerSpawner spawner, TerritoryConfig territoryConfig)
+        static TerritorySystem SetupTerritory(MapView map, PlayerSpawner spawner, TerritoryConfig territoryConfig)
         {
             var system = Object.FindFirstObjectByType<TerritorySystem>();
             if (system == null)
@@ -124,6 +129,160 @@ namespace GameJam.Editor
             viewSO.FindProperty("system").objectReferenceValue = system;
             viewSO.FindProperty("config").objectReferenceValue = territoryConfig;
             viewSO.ApplyModifiedPropertiesWithoutUndo();
+            return system;
+        }
+
+        // ---- round timer + end-of-round overlay ---------------------------------------------------------------
+
+        static void SetupRound(TerritorySystem territory, PlayerSpawner spawner)
+        {
+            EnsureTmpEssentials();
+            EnsureEventSystem();
+
+            // Canvas with the overlay (end-of-round screen) and the timer HUD.
+            var overlay = Object.FindFirstObjectByType<RoundEndOverlay>();
+            if (overlay == null)
+            {
+                var canvasGo = new GameObject("RoundCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+                Undo.RegisterCreatedObjectUndo(canvasGo, "Create Round UI");
+                var canvas = canvasGo.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 100;
+                var scaler = canvasGo.GetComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920f, 1080f);
+                scaler.matchWidthOrHeight = 0.5f;
+                overlay = canvasGo.AddComponent<RoundEndOverlay>();
+                BuildOverlay(overlay);
+            }
+
+            var round = Object.FindFirstObjectByType<RoundManager>();
+            if (round == null)
+            {
+                var go = new GameObject("Round");
+                Undo.RegisterCreatedObjectUndo(go, "Create Round");
+                round = go.AddComponent<RoundManager>();
+            }
+            var roundSO = new SerializedObject(round);
+            roundSO.FindProperty("territory").objectReferenceValue = territory;
+            roundSO.FindProperty("spawner").objectReferenceValue = spawner;
+            roundSO.FindProperty("overlay").objectReferenceValue = overlay;
+            roundSO.ApplyModifiedPropertiesWithoutUndo();
+
+            var timer = Object.FindFirstObjectByType<RoundTimerDisplay>();
+            if (timer == null)
+            {
+                TMP_Text label = CreateText("TimerLabel", overlay.transform, "2:00", 64, TextAlignmentOptions.Center);
+                var rt = label.rectTransform;
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+                rt.anchoredPosition = new Vector2(0f, -10f);
+                rt.sizeDelta = new Vector2(300f, 80f);
+                label.raycastTarget = false;
+                timer = label.gameObject.AddComponent<RoundTimerDisplay>();
+                var timerSO = new SerializedObject(timer);
+                timerSO.FindProperty("round").objectReferenceValue = round;
+                timerSO.FindProperty("label").objectReferenceValue = label;
+                timerSO.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
+        static void BuildOverlay(RoundEndOverlay overlay)
+        {
+            // Full-screen dimmed panel on top of the map.
+            var panel = new GameObject("RoundEndPanel", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            panel.transform.SetParent(overlay.transform, false);
+            Stretch(panel.GetComponent<RectTransform>());
+            panel.GetComponent<UnityEngine.UI.Image>().color = new Color(0f, 0f, 0f, 0.65f);
+
+            // Top: four percentages in a row.
+            var row = new GameObject("Percentages", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            row.transform.SetParent(panel.transform, false);
+            var rowRt = row.GetComponent<RectTransform>();
+            rowRt.anchorMin = new Vector2(0f, 1f);
+            rowRt.anchorMax = new Vector2(1f, 1f);
+            rowRt.pivot = new Vector2(0.5f, 1f);
+            rowRt.anchoredPosition = new Vector2(0f, -80f);
+            rowRt.sizeDelta = new Vector2(-200f, 220f);
+            var layout = row.GetComponent<HorizontalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = layout.childControlHeight = true;
+            layout.childForceExpandWidth = layout.childForceExpandHeight = true;
+            layout.spacing = 40f;
+
+            var labels = new TMP_Text[PlayersConfig.MaxPlayers];
+            for (int i = 0; i < labels.Length; i++)
+            {
+                labels[i] = CreateText($"Percent_P{i + 1}", row.transform, $"P{i + 1}\n0.0%", 72, TextAlignmentOptions.Center);
+                labels[i].raycastTarget = false;
+            }
+
+            // Center: Next Round button.
+            var buttonGo = new GameObject("NextRoundButton", typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(Button));
+            buttonGo.transform.SetParent(panel.transform, false);
+            var buttonRt = buttonGo.GetComponent<RectTransform>();
+            buttonRt.anchorMin = buttonRt.anchorMax = buttonRt.pivot = new Vector2(0.5f, 0.5f);
+            buttonRt.anchoredPosition = Vector2.zero;
+            buttonRt.sizeDelta = new Vector2(520f, 140f);
+            buttonGo.GetComponent<UnityEngine.UI.Image>().color = new Color(0.2f, 0.6f, 0.35f);
+            var button = buttonGo.GetComponent<Button>();
+            TMP_Text buttonLabel = CreateText("Label", buttonGo.transform, "Next Round", 56, TextAlignmentOptions.Center);
+            buttonLabel.raycastTarget = false;
+            Stretch(buttonLabel.rectTransform);
+
+            var so = new SerializedObject(overlay);
+            so.FindProperty("panel").objectReferenceValue = panel;
+            so.FindProperty("nextRoundButton").objectReferenceValue = button;
+            SerializedProperty list = so.FindProperty("percentageLabels");
+            list.arraySize = labels.Length;
+            for (int i = 0; i < labels.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = labels[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            panel.SetActive(false);
+        }
+
+        static TMP_Text CreateText(string name, Transform parent, string text, float size, TextAlignmentOptions alignment)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
+            go.transform.SetParent(parent, false);
+            var tmp = go.GetComponent<TextMeshProUGUI>();
+            tmp.text = text;
+            tmp.fontSize = size;
+            tmp.alignment = alignment;
+            tmp.color = Color.white;
+            return tmp;
+        }
+
+        static void Stretch(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+        }
+
+        static void EnsureEventSystem()
+        {
+            var es = Object.FindFirstObjectByType<EventSystem>();
+            if (es == null)
+            {
+                es = new GameObject("EventSystem", typeof(EventSystem)).GetComponent<EventSystem>();
+                Undo.RegisterCreatedObjectUndo(es.gameObject, "Create EventSystem");
+            }
+            // The project uses the new Input System only, so the legacy StandaloneInputModule would not work.
+            if (es.GetComponent<InputSystemUIInputModule>() == null)
+            {
+                var legacy = es.GetComponent<StandaloneInputModule>();
+                if (legacy != null) Object.DestroyImmediate(legacy);
+                es.gameObject.AddComponent<InputSystemUIInputModule>();
+            }
+        }
+
+        static void EnsureTmpEssentials()
+        {
+            if (TMP_Settings.instance != null) return;
+            TMP_PackageResourceImporter.ImportResources(true, false, false);
+            AssetDatabase.Refresh();
+            if (TMP_Settings.instance == null)
+                Debug.LogWarning("TextMesh Pro essentials were just imported - run Tools > GameJam > Setup Scene once more so the new text objects pick up the default font.");
         }
 
         // The trail is drawn by a small circle on its own child object, independent of the player's sprite.
