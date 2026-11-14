@@ -171,6 +171,7 @@ namespace GameJam.Editor
 
             EnsureOverlayTitle(overlay);
             EnsureReplay(round, territory, spawner);
+            EnsureGhostElimination(territory, spawner);
             ScoreManager scores = EnsureScores(round, spawner, overlay);
             EnsurePowerUps(round, spawner, overlay);
 
@@ -205,6 +206,23 @@ namespace GameJam.Editor
             so.FindProperty("round").objectReferenceValue = round;
             so.FindProperty("spawner").objectReferenceValue = spawner;
             so.FindProperty("territory").objectReferenceValue = territory;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // A loop closed by a live character eliminates the opponents' ghosts inside it, for that round only.
+        static void EnsureGhostElimination(TerritorySystem territory, PlayerSpawner spawner)
+        {
+            var elimination = Object.FindFirstObjectByType<GhostElimination>();
+            if (elimination == null)
+            {
+                var go = new GameObject("Ghost Elimination");
+                Undo.RegisterCreatedObjectUndo(go, "Create Ghost Elimination");
+                elimination = go.AddComponent<GhostElimination>();
+            }
+            var so = new SerializedObject(elimination);
+            so.FindProperty("territory").objectReferenceValue = territory;
+            so.FindProperty("replay").objectReferenceValue = Object.FindFirstObjectByType<ReplayManager>();
+            so.FindProperty("spawner").objectReferenceValue = spawner;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

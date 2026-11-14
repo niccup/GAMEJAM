@@ -32,6 +32,13 @@ namespace GameJam
         /// <summary>Raised after a capture: (player index, number of cells filled).</summary>
         public event Action<int, int> LoopClosed;
 
+        /// <summary>
+        /// Raised at the moment a loop is completed, with the enclosed area: (actor that closed the loop, its player, the cells
+        /// that were filled - every enclosed cell that did not show the player's color yet, see <see cref="LoopDetector"/>).
+        /// The list is reused by the next capture, so read it during the call and do not keep it. Handlers must not step the engine.
+        /// </summary>
+        public event Action<int, int, IReadOnlyList<int>> LoopCaptured;
+
         public TerritoryEngine(TerritoryGrid grid, float minLoopLength)
         {
             Grid = grid;
@@ -63,6 +70,7 @@ namespace GameJam
             // Fill the enclosed area with the player's color, whoever's pixels were inside.
             for (int i = 0; i < loopCells.Count; i++) Grid.Fill(loopCells[i], player);
 
+            LoopCaptured?.Invoke(actor, player, loopCells);
             LoopClosed?.Invoke(player, count);
             return count;
         }

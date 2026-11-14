@@ -26,6 +26,25 @@ namespace GameJam
         /// <summary>True once the round clock has passed the end of the recorded path.</summary>
         public bool Finished { get; private set; }
 
+        /// <summary>
+        /// True once an opponent's loop has caught this ghost in the current round (see <see cref="GhostElimination"/>). It is
+        /// state of this ghost object only: it hides the ghost and stops its trail, but the <see cref="MovementRecording"/> is
+        /// not touched, so the next round builds a fresh ghost from the unchanged history.
+        /// </summary>
+        public bool IsEliminated { get; private set; }
+
+        /// <summary>True while the ghost is still replaying and shown in the arena - the only time a loop can catch it.</summary>
+        public bool IsOnArena => !IsEliminated && !(Finished && hideWhenFinished);
+
+        /// <summary>Takes the ghost out of the current round: it disappears and stops drawing. Nothing recorded changes.</summary>
+        public void Eliminate()
+        {
+            if (IsEliminated) return;
+            IsEliminated = true;
+            TrailEmitter.Emitting = false;
+            spriteRenderer.enabled = false;
+        }
+
         /// <summary>Builds a ghost that looks like <paramref name="owner"/> but in <paramref name="color"/> and replays <paramref name="recording"/>.</summary>
         public static PlayerGhost Create(Player owner, MovementRecording recording, Color color, int sortingOrderOffset,
             bool hideWhenFinished, string name, Transform parent)
@@ -71,8 +90,9 @@ namespace GameJam
             transform.position = new Vector3(position.x, position.y, transform.position.z);
 
             // After its path ends the ghost stops drawing (it would otherwise keep re-claiming the cells it stands on).
-            TrailEmitter.Emitting = emitting && !Finished;
-            spriteRenderer.enabled = !(Finished && hideWhenFinished);
+            // An eliminated ghost keeps following its recording (so it stays in sync) but neither shows nor draws.
+            TrailEmitter.Emitting = emitting && !Finished && !IsEliminated;
+            spriteRenderer.enabled = !(Finished && hideWhenFinished) && !IsEliminated;
         }
     }
 }

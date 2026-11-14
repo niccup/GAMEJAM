@@ -40,6 +40,12 @@ namespace GameJam
         /// <summary>Raised when a player closes a loop: (player index, cells captured).</summary>
         public event Action<int, int> LoopClosed;
 
+        /// <summary>
+        /// Raised the moment a loop is completed: (the emitter that closed it - a player's own or a ghost's, the player it draws
+        /// for, the enclosed cells that were captured). The list is only valid during the call.
+        /// </summary>
+        public event Action<TrailEmitter, int, IReadOnlyList<int>> LoopCaptured;
+
         void Awake()
         {
             Vector2 size = map.Size;
@@ -47,6 +53,18 @@ namespace GameJam
             Engine = new TerritoryEngine(Grid, config.minLoopLength);
             Palette = new TerritoryPalette(config, PlayersConfig.MaxPlayers);
             Engine.LoopClosed += (player, cells) => LoopClosed?.Invoke(player, cells);
+            Engine.LoopCaptured += OnLoopCaptured;
+        }
+
+        void OnLoopCaptured(int actor, int player, IReadOnlyList<int> cells)
+        {
+            if (LoopCaptured == null) return;
+            foreach (Source source in sources)
+            {
+                if (source.Actor != actor) continue;
+                LoopCaptured(source.Emitter, player, cells);
+                return;
+            }
         }
 
         void OnEnable()
