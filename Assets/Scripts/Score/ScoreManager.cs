@@ -25,6 +25,9 @@ namespace GameJam
         // completed[player] = that player's percentage at the end of each finished round, oldest first.
         readonly List<float>[] completed = new List<float>[PlayersConfig.MaxPlayers];
 
+        // The round number (as counted by the RoundManager) of each stored round, in the same order as `completed`.
+        readonly List<int> completedRoundNumbers = new List<int>();
+
         public int PlayerCount => PlayersConfig.MaxPlayers;
 
         /// <summary>Players that actually take part (the rest, e.g. in keyboard test mode, never win).</summary>
@@ -47,6 +50,22 @@ namespace GameJam
         public void ResetScores()
         {
             foreach (List<float> list in completed) list.Clear();
+            completedRoundNumbers.Clear();
+        }
+
+        /// <summary>
+        /// Takes one finished round out of the scoring (Reset removes the round from the game): its percentages no longer
+        /// count towards the cumulative scores, so with the extra round that replaces it the final score is again the mean
+        /// of the planned number of rounds. All other rounds keep their stored values. Returns false if it was not stored.
+        /// </summary>
+        public bool RemoveRound(int roundNumber)
+        {
+            int index = completedRoundNumbers.IndexOf(roundNumber);
+            if (index < 0) return false;
+
+            foreach (List<float> list in completed) list.RemoveAt(index);
+            completedRoundNumbers.RemoveAt(index);
+            return true;
         }
 
         /// <summary>The stored percentage (0-100) of a player in a finished round (0-based round index).</summary>
@@ -144,6 +163,7 @@ namespace GameJam
         {
             // The coverage is final at this point. Store every player's share of the map for this round.
             for (int i = 0; i < completed.Length; i++) completed[i].Add(GetCurrentMapPercent(i));
+            completedRoundNumbers.Add(round.CurrentRound);
         }
     }
 }

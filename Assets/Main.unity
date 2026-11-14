@@ -510,9 +510,9 @@ MonoBehaviour:
   m_fontSize: 26
   m_fontSizeBase: 26
   m_fontWeight: 400
-  m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_enableAutoSizing: 1
+  m_fontSizeMin: 14
+  m_fontSizeMax: 26
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
@@ -1066,9 +1066,9 @@ MonoBehaviour:
   m_fontSize: 44
   m_fontSizeBase: 44
   m_fontWeight: 400
-  m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_enableAutoSizing: 1
+  m_fontSizeMin: 24
+  m_fontSizeMax: 44
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -1772,7 +1772,7 @@ MonoBehaviour:
   powerUps: {fileID: 1232924777}
   maxRounds: 4
   endOnTimeUp: 1
-  roundDuration: 20
+  roundDuration: 5
   endOnCoverage: 1
   coverageEndPercent: 90
   startOnAwake: 1
@@ -2665,6 +2665,8 @@ MonoBehaviour:
   hintLabel: {fileID: 92798690}
   optionsRoot: {fileID: 516985039}
   optionTemplate: {fileID: 1053200064}
+  placeholderIcon: {fileID: 21300000, guid: a7d3f18e6b2c4a95b04e8c1f7d6a39e0, type: 3}
+  maxRowWidth: 0.94
   spacing: 40
   chipScale: 0.55
   chipsHeight: 200
@@ -3410,6 +3412,8 @@ MonoBehaviour:
   spawner: {fileID: 1633626329}
   map: {fileID: 251528942}
   replay: {fileID: 1807590721}
+  round: {fileID: 0}
+  scores: {fileID: 0}
   territory: {fileID: 371507327}
   overlay: {fileID: 931807255}
   pool:
@@ -3417,6 +3421,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 58d5c91a0dfc34e2aa5d7e7094ed597a, type: 2}
   - {fileID: 11400000, guid: c3973ab29113749618dce273584e128c, type: 2}
   - {fileID: 11400000, guid: d792a920420924597a83c6dccee59e26, type: 2}
+  - {fileID: 11400000, guid: e1a4c7d92b5f4086a3d7c91f5b82e0a3, type: 2}
   actionName: Action
   moveActionName: Move
   inputDelay: 0.15
@@ -3720,7 +3725,7 @@ MonoBehaviour:
       m_Calls: []
   m_Sprite: {fileID: 0}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1

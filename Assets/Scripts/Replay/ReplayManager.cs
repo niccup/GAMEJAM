@@ -57,6 +57,46 @@ namespace GameJam
         public MovementRecording GetRecording(int player, int index) => history[player][index];
 
         /// <summary>
+        /// The rounds (1-based round numbers, ascending) that still have at least one saved movement, i.e. the rounds a
+        /// Reset can remove. A round that was removed is gone from this list for good.
+        /// </summary>
+        public List<int> GetSavedRounds()
+        {
+            var rounds = new List<int>();
+            foreach (List<MovementRecording> list in history)
+                foreach (MovementRecording recording in list)
+                    if (recording.OriginRound > 0 && !rounds.Contains(recording.OriginRound)) rounds.Add(recording.OriginRound);
+            rounds.Sort();
+            return rounds;
+        }
+
+        /// <summary>
+        /// Every saved movement that was played in round <paramref name="roundNumber"/>, with the player whose ghost it is
+        /// now (after a Swap that is not necessarily the player who played it). Nothing is changed.
+        /// </summary>
+        public List<(int Player, MovementRecording Recording)> GetRecordingsOfRound(int roundNumber)
+        {
+            var found = new List<(int, MovementRecording)>();
+            for (int player = 0; player < history.Length; player++)
+                foreach (MovementRecording recording in history[player])
+                    if (recording.OriginRound == roundNumber) found.Add((player, recording));
+            return found;
+        }
+
+        /// <summary>
+        /// Removes one round from the history: every saved movement that was played in <paramref name="roundNumber"/> is
+        /// dropped from every player, so none of its ghosts is spawned again. Movements of all other rounds are not touched
+        /// (they are matched by their own origin round, never by their position in the list). Returns how many were removed.
+        /// </summary>
+        public int RemoveRound(int roundNumber)
+        {
+            int removed = 0;
+            foreach (List<MovementRecording> list in history)
+                removed += list.RemoveAll(recording => recording.OriginRound == roundNumber);
+            return removed;
+        }
+
+        /// <summary>
         /// Swaps a saved recording for another one (e.g. its mirrored version). From the next round on the ghost replays the
         /// new one, so the replacement has to be the final movement - ghosts never transform anything while replaying.
         /// </summary>
@@ -134,7 +174,7 @@ namespace GameJam
             if (current[player.Index] != null) return current[player.Index];
             if (player.TrailEmitter == null) return null;
 
-            var recording = new MovementRecording(player.Modifiers); // snapshot: the ghost keeps what the player had in this round
+            var recording = new MovementRecording(player.Modifiers, round.CurrentRound); // snapshot: the ghost keeps what the player had in this round
             recording.Add(0f, player.transform.position, player.TrailEmitter.Emitting);
             return current[player.Index] = recording;
         }
@@ -149,7 +189,7 @@ namespace GameJam
                 for (int i = 0; i < saved.Count; i++)
                 {
                     var ghost = PlayerGhost.Create(player, saved[i], ghostColor, ghostSortingOrderOffset, hideGhostWhenPathEnds,
-                        $"Ghost P{player.Index + 1} R{i + 1}", transform);
+                        $"Ghost P{player.Index + 1} R{saved[i].OriginRound}", transform);
                     territory.AddEmitter(ghost.TrailEmitter, player.Index);
                     ghosts.Add(ghost);
                 }

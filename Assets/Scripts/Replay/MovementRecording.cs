@@ -27,9 +27,17 @@ namespace GameJam
         /// </summary>
         public IReadOnlyList<PlayerModifier> Modifiers { get; }
 
-        public MovementRecording(IEnumerable<PlayerModifier> modifiers = null)
+        /// <summary>
+        /// The round (1-based, as counted by the <see cref="RoundManager"/>) in which this movement was played, 0 if unknown.
+        /// It belongs to the movement itself: it stays with it through Mirror and Swap (a swapped ghost still carries the
+        /// round its movement came from), which is what lets Reset remove one round's ghosts and nothing else.
+        /// </summary>
+        public int OriginRound { get; }
+
+        public MovementRecording(IEnumerable<PlayerModifier> modifiers = null, int originRound = 0)
         {
             Modifiers = modifiers == null ? System.Array.Empty<PlayerModifier>() : new List<PlayerModifier>(modifiers).AsReadOnly();
+            OriginRound = originRound;
         }
 
         /// <summary>True for a recording produced by <see cref="CreateMirrored"/>. Its samples are the stored, final movement.</summary>
@@ -46,7 +54,7 @@ namespace GameJam
         /// <summary>A copy of this movement (samples, timing, carried modifiers and flags) that is marked as swapped. The source is not changed.</summary>
         public MovementRecording MarkedAsSwapped()
         {
-            var copy = new MovementRecording(Modifiers) { IsMirrored = IsMirrored, IsSwapped = true };
+            var copy = new MovementRecording(Modifiers, OriginRound) { IsMirrored = IsMirrored, IsSwapped = true };
             copy.samples.AddRange(samples);
             return copy;
         }
@@ -79,7 +87,7 @@ namespace GameJam
         /// </summary>
         public MovementRecording CreateMirrored(Vector2 mapCenter, Vector2 limits)
         {
-            var result = new MovementRecording(Modifiers) { IsMirrored = true, IsSwapped = IsSwapped };
+            var result = new MovementRecording(Modifiers, OriginRound) { IsMirrored = true, IsSwapped = IsSwapped };
             if (samples.Count == 0) return result;
 
             Vector2 start = samples[0].Position;

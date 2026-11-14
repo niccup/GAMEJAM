@@ -54,16 +54,24 @@ namespace GameJam
         public UnityEvent onGameFinished;
 
         TerritoryCoverage coverage;
+        int bonusRounds;
 
         public RoundState State { get; private set; } = RoundState.NotStarted;
         public RoundEndReason? EndReason { get; private set; }
 
-        public int MaxRounds => maxRounds;
+        /// <summary>
+        /// Total number of rounds the game consists of: the configured number plus one extra round for every Reset that was
+        /// played (<see cref="AddRound"/>). The final results come after the last of them.
+        /// </summary>
+        public int MaxRounds => maxRounds + bonusRounds;
+
+        /// <summary>Rounds added during the game (one per Reset).</summary>
+        public int BonusRounds => bonusRounds;
 
         /// <summary>Number of the current (or just finished) round, starting at 1. 0 before the first round starts.</summary>
         public int CurrentRound { get; private set; }
 
-        public bool IsFinalRound => CurrentRound >= maxRounds;
+        public bool IsFinalRound => CurrentRound >= MaxRounds;
 
         /// <summary>True once the last round has ended; no further round can be started.</summary>
         public bool IsGameFinished => State == RoundState.Ended && IsFinalRound;
@@ -172,6 +180,13 @@ namespace GameJam
             onRoundStarted?.Invoke();
         }
 
+        /// <summary>
+        /// Adds one more round to the end of the game (used by Reset, which replaces the round it removes). Only meant to be
+        /// called between rounds, before the next one starts; the new total is what <see cref="IsFinalRound"/> and the
+        /// round counter on the end-of-round screen use from then on.
+        /// </summary>
+        public void AddRound() => bonusRounds++;
+
         /// <summary>Ends the current round right now (also usable from other scripts, e.g. a debug key).</summary>
         public void EndRound(RoundEndReason reason)
         {
@@ -185,7 +200,7 @@ namespace GameJam
             // Listeners first (the ScoreManager stores this round's result), then the screen that displays the scores.
             RoundEnded?.Invoke(reason);
             onRoundEnded?.Invoke(reason);
-            if (overlay != null && scores != null) overlay.Show(scores, CurrentRound, maxRounds);
+            if (overlay != null && scores != null) overlay.Show(scores, CurrentRound, MaxRounds);
 
             if (IsFinalRound)
             {

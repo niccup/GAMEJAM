@@ -57,7 +57,7 @@ namespace GameJam
 
             var cards = new List<OptionData>(offer.Count);
             for (int i = 0; i < offer.Count; i++)
-                cards.Add(new OptionData { Icon = offer[i].Icon, Title = offer[i].DisplayName, Detail = offer[i].Description, Enabled = available[i] });
+                cards.Add(new OptionData { Icon = offer[i].Icon != null ? offer[i].Icon : Context.Overlay.PlaceholderIcon, Title = offer[i].DisplayName, Detail = offer[i].Description, Enabled = available[i] });
             Context.Overlay.ShowOptions(cards, selected, OptionsLayout.Cards);
         }
 

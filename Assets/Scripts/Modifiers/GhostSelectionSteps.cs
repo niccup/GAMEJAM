@@ -20,6 +20,7 @@ namespace GameJam
         public static string Describe(MovementRecording recording)
         {
             var text = new StringBuilder();
+            if (recording.OriginRound > 0) Append(text, $"round {recording.OriginRound}");
             foreach (PlayerModifier modifier in recording.Modifiers) Append(text, modifier.DisplayName);
             if (recording.IsMirrored) Append(text, "mirrored");
             if (recording.IsSwapped) Append(text, "swapped");

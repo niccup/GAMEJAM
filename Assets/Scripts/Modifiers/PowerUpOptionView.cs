@@ -58,6 +58,7 @@ namespace GameJam
             if (iconImage != null)
             {
                 iconImage.sprite = data.Icon;
+                iconImage.preserveAspect = true; // artwork of any shape is fitted into the icon slot, never stretched
                 iconImage.enabled = data.Icon != null;
                 iconImage.color = optionEnabled ? Color.white : new Color(1f, 1f, 1f, 0.35f);
             }

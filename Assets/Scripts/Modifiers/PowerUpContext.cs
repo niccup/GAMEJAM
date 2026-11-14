@@ -19,6 +19,12 @@ namespace GameJam
         public PlayerSpawner Spawner { get; }
         public MapView Map { get; }
 
+        /// <summary>The round counter of the game (null if the scene has none wired). Reset adds a round through it.</summary>
+        public RoundManager Round { get; }
+
+        /// <summary>The scores of the finished rounds (null if the scene has none wired).</summary>
+        public ScoreManager Scores { get; }
+
         /// <summary>The saved movement of previous rounds. Null if the scene has no ReplayManager wired.</summary>
         public ReplayManager Replay { get; }
 
@@ -30,12 +36,15 @@ namespace GameJam
         /// <summary>Fast replay of one movement on the map, completely separate from the game.</summary>
         public GhostPreview Preview { get; }
 
-        public PowerUpContext(Player chooser, PlayerSpawner spawner, MapView map, ReplayManager replay, PowerUpOverlay overlay,
-            SelectionMarkers markers, GhostPreview preview, Action<SelectionStep> push, Action back, Action complete)
+        public PowerUpContext(Player chooser, PlayerSpawner spawner, MapView map, RoundManager round, ScoreManager scores,
+            ReplayManager replay, PowerUpOverlay overlay, SelectionMarkers markers, GhostPreview preview,
+            Action<SelectionStep> push, Action back, Action complete)
         {
             Chooser = chooser;
             Spawner = spawner;
             Map = map;
+            Round = round;
+            Scores = scores;
             Replay = replay;
             Overlay = overlay;
             Markers = markers;

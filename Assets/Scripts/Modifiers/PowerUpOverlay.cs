@@ -31,7 +31,14 @@ namespace GameJam
         [Tooltip("Inactive prototype of one option (card or chip). Copied as often as needed.")]
         [SerializeField] PowerUpOptionView optionTemplate;
 
+        [Header("Artwork")]
+        [Tooltip("Shown on the card of a power-up that has no icon of its own (its Icon slot is empty). Replace it with any sprite.")]
+        [SerializeField] Sprite placeholderIcon;
+
         [Header("Layout")]
+        [Tooltip("The options row is shrunk (cards, chips and the gaps between them) until it fits within this share of the screen width, " +
+                 "so any number of options stays on one screen at any resolution or aspect ratio. Never enlarged beyond normal size.")]
+        [SerializeField, Range(0.5f, 1f)] float maxRowWidth = 0.94f;
         [SerializeField] float spacing = 40f;
         [Tooltip("Size of a chip relative to a card.")]
         [SerializeField, Range(0.2f, 1f)] float chipScale = 0.55f;
@@ -46,6 +53,9 @@ namespace GameJam
             if (optionTemplate != null) optionTemplate.gameObject.SetActive(false);
             Close();
         }
+
+        /// <summary>The picture for a power-up without artwork of its own (null if none is assigned).</summary>
+        public Sprite PlaceholderIcon => placeholderIcon;
 
         public void Open()
         {
@@ -80,6 +90,16 @@ namespace GameJam
             bool chips = layout == OptionsLayout.Chips;
             float scale = chips ? chipScale : 1f;
             var templateRect = (RectTransform)optionTemplate.transform;
+
+            // Shrink the whole row so it fits the screen, whatever its resolution or aspect ratio (canvas units).
+            float screenWidth = panel != null ? ((RectTransform)panel.transform).rect.width : 0f;
+            if (screenWidth <= 0f) screenWidth = ((RectTransform)transform).rect.width;
+            if (screenWidth > 0f && options.Count > 0)
+            {
+                float rowAtFullScale = options.Count * templateRect.sizeDelta.x + (options.Count - 1) * spacing;
+                scale = Mathf.Min(scale, screenWidth * maxRowWidth / rowAtFullScale);
+            }
+
             float width = templateRect.sizeDelta.x * scale;
             float gap = spacing * scale;
             float total = options.Count * width + (options.Count - 1) * gap;

@@ -24,8 +24,12 @@ namespace GameJam
         [Header("References")]
         [SerializeField] PlayerSpawner spawner;
         [SerializeField] MapView map;
-        [Tooltip("Needed for power-ups that work on ghosts (Mirror).")]
+        [Tooltip("Needed for power-ups that work on ghosts (Mirror, Swap, Reset).")]
         [SerializeField] ReplayManager replay;
+        [Tooltip("Needed by Reset, which adds a round to the game. Found in the scene if left empty.")]
+        [SerializeField] RoundManager round;
+        [Tooltip("Needed by Reset, which takes the removed round out of the scores. Found in the scene if left empty.")]
+        [SerializeField] ScoreManager scores;
         [Tooltip("Gives the ghost preview the game's own trail settings (cell size, loop rules, opacity).")]
         [SerializeField] TerritorySystem territory;
         [SerializeField] PowerUpOverlay overlay;
@@ -53,6 +57,7 @@ namespace GameJam
 
         readonly Queue<Player> waiting = new Queue<Player>();
         readonly List<PowerUp> remaining = new List<PowerUp>();
+        readonly HashSet<PowerUp> takenForGame = new HashSet<PowerUp>(); // once-per-game power-ups that have been taken
         readonly List<SelectionStep> stack = new List<SelectionStep>();
 
         PowerUpContext context;
@@ -74,6 +79,8 @@ namespace GameJam
             markers.Initialize(map, spawner != null ? spawner.Config : null);
             preview = CreateChild<GhostPreview>("GhostPreview");
             if (territory == null) territory = FindFirstObjectByType<TerritorySystem>();
+            if (round == null) round = FindFirstObjectByType<RoundManager>();
+            if (scores == null) scores = FindFirstObjectByType<ScoreManager>();
             preview.Configure(map, territory != null ? territory.Config : null, previewHoldSeconds, previewFrameBudgetMilliseconds);
         }
 
@@ -99,9 +106,10 @@ namespace GameJam
             foreach (Player player in choosers)
                 if (player != null && !waiting.Contains(player)) waiting.Enqueue(player);
 
+            // The pool starts full - except for the once-per-game power-ups that have already been taken.
             remaining.Clear();
             foreach (PowerUp powerUp in pool)
-                if (powerUp != null) remaining.Add(powerUp);
+                if (powerUp != null && !takenForGame.Contains(powerUp)) remaining.Add(powerUp);
 
             draftSize = waiting.Count;
 
@@ -109,6 +117,9 @@ namespace GameJam
             IsActive = true;
             if (!StartNextTurn()) Finish();
         }
+
+        /// <summary>Makes the once-per-game power-ups (Reset) available again. Call it when a brand new game starts.</summary>
+        public void ResetGame() => takenForGame.Clear();
 
         void Update()
         {
@@ -140,7 +151,7 @@ namespace GameJam
                     continue;
                 }
 
-                var turn = new PowerUpContext(chooser, spawner, map, replay, overlay, markers, preview, Push, Back, Complete);
+                var turn = new PowerUpContext(chooser, spawner, map, round, scores, replay, overlay, markers, preview, Push, Back, Complete);
                 turn.DraftPosition = draftSize - waiting.Count;
                 turn.DraftSize = draftSize;
                 var offer = new OfferStep(turn, remaining);
@@ -174,7 +185,11 @@ namespace GameJam
         void Complete()
         {
             // A taken power-up is gone for every later player of this draft (a skipped turn took nothing).
-            if (context != null && context.Picked != null) remaining.Remove(context.Picked);
+            if (context != null && context.Picked != null)
+            {
+                remaining.Remove(context.Picked);
+                if (context.Picked.OncePerGame) takenForGame.Add(context.Picked); // gone for the rest of the game
+            }
             EndTurn();
             if (!StartNextTurn()) Finish();
         }

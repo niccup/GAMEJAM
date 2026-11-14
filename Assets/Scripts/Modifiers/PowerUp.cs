@@ -14,12 +14,20 @@ namespace GameJam
 
         [SerializeField, TextArea(1, 3)] string description;
 
-        [Tooltip("Shown on the power-up selection screen.")]
+        [Header("Artwork")]
+        [Tooltip("The picture on this power-up's card. Drag any sprite here to replace it - no code or scene change needed. " +
+                 "Left empty, the selection screen shows its placeholder picture instead. Any aspect ratio works: the picture is fitted into the card without stretching.")]
         [SerializeField] Sprite icon;
 
         public string DisplayName => string.IsNullOrEmpty(displayName) ? name : displayName;
         public string Description => description;
         public Sprite Icon => icon;
+
+        /// <summary>
+        /// True for a power-up that can be taken only once during the whole game, by whichever player: as soon as it has
+        /// been taken it is gone from every later draft, even though the pool otherwise starts full again each round.
+        /// </summary>
+        public virtual bool OncePerGame => false;
 
         /// <summary>False if the power-up cannot be used right now (it is then shown greyed out and cannot be picked).</summary>
         public virtual bool IsAvailable(PowerUpContext context) => true;
