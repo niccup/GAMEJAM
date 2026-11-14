@@ -35,7 +35,21 @@ namespace GameJam
         /// <summary>True for a recording produced by <see cref="CreateMirrored"/>. Its samples are the stored, final movement.</summary>
         public bool IsMirrored { get; private set; }
 
+        /// <summary>
+        /// True once this movement has taken part in a Swap. It belongs to the movement, so it stays with it through any
+        /// later change (a Mirror keeps it) and a swapped ghost can never be swapped again.
+        /// </summary>
+        public bool IsSwapped { get; private set; }
+
         public int SampleCount => samples.Count;
+
+        /// <summary>A copy of this movement (samples, timing, carried modifiers and flags) that is marked as swapped. The source is not changed.</summary>
+        public MovementRecording MarkedAsSwapped()
+        {
+            var copy = new MovementRecording(Modifiers) { IsMirrored = IsMirrored, IsSwapped = true };
+            copy.samples.AddRange(samples);
+            return copy;
+        }
 
         /// <summary>Reads one stored sample (0-based). Returns false if the index is out of range.</summary>
         public bool TryGetSample(int index, out float time, out Vector2 position, out bool emitting)
@@ -65,7 +79,7 @@ namespace GameJam
         /// </summary>
         public MovementRecording CreateMirrored(Vector2 mapCenter, Vector2 limits)
         {
-            var result = new MovementRecording(Modifiers) { IsMirrored = true };
+            var result = new MovementRecording(Modifiers) { IsMirrored = true, IsSwapped = IsSwapped };
             if (samples.Count == 0) return result;
 
             Vector2 start = samples[0].Position;

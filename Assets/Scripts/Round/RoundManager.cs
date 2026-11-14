@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -24,7 +25,7 @@ namespace GameJam
         [SerializeField] RoundEndOverlay overlay;
         [Tooltip("Provides the scores the end-of-round screen shows. Required for the overlay.")]
         [SerializeField] ScoreManager scores;
-        [Tooltip("Optional. When set (together with Scores), 'Next Round' first offers a power-up to the loser of the round and the round starts once they take it. When empty, Next Round starts the round directly.")]
+        [Tooltip("Optional. When set (together with Scores), 'Next Round' first runs a power-up draft (every player picks once, least territory first) and the round starts once the last player has picked. When empty, Next Round starts the round directly.")]
         [SerializeField] PowerUpSelection powerUps;
 
         [Header("Game")]
@@ -95,9 +96,10 @@ namespace GameJam
             if (overlay != null) overlay.NextRoundRequested -= OnNextRoundRequested;
         }
 
-        // "Next Round" does not start the round itself: the power-up offer comes first. It goes to the loser of the round
-        // that just ended (smallest share of that map, ties -> lower player number) and the round starts as soon as they
-        // take it, so the power-up is in place before the recording and ghost snapshot of the new round are made.
+        // "Next Round" does not start the round itself: the power-up draft comes first. Every player gets one pick, in
+        // ascending order of their share of the map that just ended (smallest first, ties -> lower player number). The
+        // order is fixed here, once, and handed to the selection; the round starts as soon as the last player has picked,
+        // so every power-up is in place before the recording and ghost snapshot of the new round are made.
         // Power-ups last one round only: the characters start without the previous round's ones. The finished round's
         // recording already holds its own snapshot, so its ghost keeps the boost it had.
         void OnNextRoundRequested()
@@ -107,22 +109,22 @@ namespace GameJam
 
             spawner.ClearModifiers();
 
-            Player loser = null;
+            var order = new List<Player>();
             if (powerUps != null && scores != null)
             {
-                int loserIndex = scores.GetCurrentMapLoser();
-                foreach (Player player in spawner.Players)
-                    if (player.Index == loserIndex) loser = player;
+                foreach (int index in scores.GetCurrentMapOrderAscending())
+                    foreach (Player player in spawner.Players)
+                        if (player.Index == index) order.Add(player);
             }
 
-            if (loser == null)
+            if (order.Count == 0)
             {
                 StartRound();
                 return;
             }
 
             if (overlay != null) overlay.Hide();
-            powerUps.Begin(new[] { loser }, StartRound);
+            powerUps.Begin(order, StartRound);
         }
 
         void Start()

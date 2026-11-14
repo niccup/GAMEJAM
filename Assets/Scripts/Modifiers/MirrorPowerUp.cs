@@ -4,7 +4,7 @@ namespace GameJam
 {
     /// <summary>
     /// Mirror: lets the chooser pick one ghost of ANY player (their own included) and permanently mirror its movement (see
-    /// <see cref="MovementRecording.CreateMirrored"/>). Picking runs in three steps - player, ghost, confirm - and nothing
+    /// <see cref="MovementRecording.CreateMirrored"/>). Picking runs in up to three steps - player, ghost, confirm (the shared <see cref="SelectPlayerStep"/> and <see cref="SelectGhostStep"/> plus <see cref="MirrorConfirmStep"/>) - and nothing
     /// changes until the last one is confirmed; then the ghost's saved recording is replaced by the mirrored one, which
     /// every later round replays. Only that one ghost is affected, and a ghost can be mirrored only once.
     /// </summary>
@@ -33,7 +33,34 @@ namespace GameJam
             return false;
         }
 
-        public override SelectionStep Use(PowerUpContext context) => new MirrorPlayerStep(context, this);
+        // Steps 1 and 2 are the shared player and ghost steps; step 3 (the mirrored preview) is MirrorConfirmStep.
+        public override SelectionStep Use(PowerUpContext context) => new SelectPlayerStep(context,
+            player => $"Mirror - select a player: Player {player + 1}",
+            "LEFT / RIGHT: choose player     ACTION: confirm     DOWN: back",
+            player => IsValidTarget(context, player),
+            target => context.Push(new SelectGhostStep(context, target.Index,
+                ghost => $"Mirror - Player {target.Index + 1}: select a ghost (G{ghost + 1})",
+                postMirrorPreview
+                    ? "LEFT / RIGHT: choose ghost     ACTION: confirm     DOWN: back to players"
+                    : "LEFT / RIGHT: choose ghost     ACTION: mirror this ghost for good     DOWN: back to players",
+                ghost => IsMirrorable(context, target.Index, ghost),
+                "already mirrored",
+                previewSpeed,
+                ghost => OnGhostChosen(context, target.Index, ghost))));
+
+        void OnGhostChosen(PowerUpContext context, int target, int ghost)
+        {
+            if (postMirrorPreview)
+            {
+                context.Push(new MirrorConfirmStep(context, this, target, ghost));
+            }
+            else
+            {
+                // No second preview: choosing the ghost is the confirmation.
+                Apply(context, target, ghost, CreateMirrored(context, target, ghost));
+                context.Complete();
+            }
+        }
 
         /// <summary>A player (the chooser included) with at least one ghost that can still be mirrored.</summary>
         public static bool IsValidTarget(PowerUpContext context, Player target) =>

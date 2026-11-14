@@ -26,7 +26,7 @@ namespace GameJam
         public Player playerPrefab;
 
         [Header("Movement")]
-        [Tooltip("How all players move: top speed, acceleration, sliding, turning, braking. Shared by every player and " +
+        [Tooltip("How all players move: top speed, acceleration, steering, drift, braking. Shared by every player and " +
                  "applied live, so you can tune the feel while the game is running.")]
         public MovementPhysics movement = new MovementPhysics();
 

@@ -45,6 +45,21 @@ namespace GameJam
             this.complete = complete;
         }
 
+        /// <summary>This chooser's place in the draft, starting at 1 (1 = picks first).</summary>
+        public int DraftPosition { get; set; } = 1;
+
+        /// <summary>How many players pick in this draft.</summary>
+        public int DraftSize { get; set; } = 1;
+
+        /// <summary>
+        /// The power-up the chooser is currently going for. Set when they confirm it in the offer; it only counts once the
+        /// turn is completed (backing out of a multi-step power-up and taking another replaces it). The draft removes it
+        /// from the pool for everybody after them.
+        /// </summary>
+        public PowerUp Picked { get; private set; }
+
+        public void SetPicked(PowerUp powerUp) => Picked = powerUp;
+
         /// <summary>Opens <paramref name="step"/> on top of the current one.</summary>
         public void Push(SelectionStep step) => push(step);
 

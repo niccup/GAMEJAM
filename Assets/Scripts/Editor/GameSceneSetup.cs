@@ -171,6 +171,7 @@ namespace GameJam.Editor
 
             EnsureOverlayTitle(overlay);
             EnsureReplay(round, territory, spawner);
+            EnsureGhostElimination(territory, spawner);
             ScoreManager scores = EnsureScores(round, spawner, overlay);
             EnsurePowerUps(round, spawner, overlay);
 
@@ -205,6 +206,23 @@ namespace GameJam.Editor
             so.FindProperty("round").objectReferenceValue = round;
             so.FindProperty("spawner").objectReferenceValue = spawner;
             so.FindProperty("territory").objectReferenceValue = territory;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // A loop closed by a live character eliminates the opponents' ghosts inside it, for that round only.
+        static void EnsureGhostElimination(TerritorySystem territory, PlayerSpawner spawner)
+        {
+            var elimination = Object.FindFirstObjectByType<GhostElimination>();
+            if (elimination == null)
+            {
+                var go = new GameObject("Ghost Elimination");
+                Undo.RegisterCreatedObjectUndo(go, "Create Ghost Elimination");
+                elimination = go.AddComponent<GhostElimination>();
+            }
+            var so = new SerializedObject(elimination);
+            so.FindProperty("territory").objectReferenceValue = territory;
+            so.FindProperty("replay").objectReferenceValue = Object.FindFirstObjectByType<ReplayManager>();
+            so.FindProperty("spawner").objectReferenceValue = spawner;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -246,7 +264,7 @@ namespace GameJam.Editor
             return scores;
         }
 
-        // Power-up selection between rounds: the Speed Boost and Mirror assets, the selection screen and the logic that runs after "Next Round".
+        // Power-up selection between rounds: the power-up assets, the selection screen and the logic that runs after "Next Round".
         static void EnsurePowerUps(RoundManager round, PlayerSpawner spawner, RoundEndOverlay roundOverlay)
         {
             EnsureFolder(ConfigDir + "/Modifiers");
@@ -271,6 +289,18 @@ namespace GameJam.Editor
                 so.FindProperty("icon").objectReferenceValue = mirrorIcon;
                 so.ApplyModifiedPropertiesWithoutUndo();
             });
+
+            Sprite swapIcon = EnsureSwapSprite(ArtDir + "/Modifiers/Swap.png", 128);
+            var swap = EnsureAsset<SwapPowerUp>(ConfigDir + "/Modifiers/Swap.asset", m =>
+            {
+                var so = new SerializedObject(m);
+                so.FindProperty("displayName").stringValue = "Swap";
+                so.FindProperty("description").stringValue = "Trade the movement of one of your ghosts for an opponent's ghost";
+                so.FindProperty("icon").objectReferenceValue = swapIcon;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            });
+
+            BouncePowerUp bounce = EnsureBounce();
 
             // The selection screen. An older version of the panel (without the options row) is replaced.
             var view = Object.FindFirstObjectByType<PowerUpOverlay>();
@@ -297,11 +327,30 @@ namespace GameJam.Editor
             selectionSO.FindProperty("overlay").objectReferenceValue = view;
             AddToPool(selectionSO.FindProperty("pool"), speedBoost);
             AddToPool(selectionSO.FindProperty("pool"), mirror);
+            AddToPool(selectionSO.FindProperty("pool"), swap);
+            AddToPool(selectionSO.FindProperty("pool"), bounce);
             selectionSO.ApplyModifiedPropertiesWithoutUndo();
 
             var roundSO = new SerializedObject(round);
             roundSO.FindProperty("powerUps").objectReferenceValue = selection;
             roundSO.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>The Bounce power-up asset and its placeholder icon (created when missing, never overwritten). Only assets - no scene objects.</summary>
+        public static BouncePowerUp EnsureBounce()
+        {
+            EnsureFolder(ConfigDir + "/Modifiers");
+            EnsureFolder(ArtDir + "/Modifiers");
+
+            Sprite icon = EnsureBounceSprite(ArtDir + "/Modifiers/Bounce.png", 128);
+            return EnsureAsset<BouncePowerUp>(ConfigDir + "/Modifiers/Bounce.asset", m =>
+            {
+                var so = new SerializedObject(m);
+                so.FindProperty("displayName").stringValue = "Bounce";
+                so.FindProperty("description").stringValue = "Knock other players away when you touch them, for the next round";
+                so.FindProperty("icon").objectReferenceValue = icon;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            });
         }
 
         static void AddToPool(SerializedProperty pool, PowerUp powerUp)
@@ -474,6 +523,93 @@ namespace GameJam.Editor
                 if (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r)) <= r) c = new Color(0.12f, 0.14f, 0.2f);
                 if (InsidePolygon(p, upperLeft) || InsidePolygon(p, lowerRight)) c = new Color(0.4f, 0.85f, 1f);
                 if (Mathf.Abs(p.x - p.y) < 0.02f && p.x > 0.12f && p.x < 0.88f) c = Color.white;
+                tex.SetPixel(x, y, c);
+            }
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+
+            AssetDatabase.ImportAsset(path);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spritePixelsPerUnit = size;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        // Placeholder Swap icon: two arrows pointing in opposite directions on a dark disc.
+        static Sprite EnsureSwapSprite(string path, int size)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null) return existing;
+
+            Vector2[][] upper =
+            {
+                new[] { new Vector2(0.2f, 0.58f), new Vector2(0.2f, 0.66f), new Vector2(0.6f, 0.66f), new Vector2(0.6f, 0.58f) },
+                new[] { new Vector2(0.58f, 0.5f), new Vector2(0.58f, 0.74f), new Vector2(0.82f, 0.62f) },
+            };
+            Vector2[][] lower =
+            {
+                new[] { new Vector2(0.4f, 0.34f), new Vector2(0.4f, 0.42f), new Vector2(0.8f, 0.42f), new Vector2(0.8f, 0.34f) },
+                new[] { new Vector2(0.42f, 0.26f), new Vector2(0.42f, 0.5f), new Vector2(0.18f, 0.38f) },
+            };
+
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float r = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                var p = new Vector2((x + 0.5f) / size, (y + 0.5f) / size);
+                Color c = Color.clear;
+                if (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r)) <= r) c = new Color(0.12f, 0.14f, 0.2f);
+                foreach (Vector2[] shape in upper) if (InsidePolygon(p, shape)) c = new Color(1f, 0.65f, 0.2f);
+                foreach (Vector2[] shape in lower) if (InsidePolygon(p, shape)) c = new Color(0.5f, 0.9f, 0.6f);
+                tex.SetPixel(x, y, c);
+            }
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+
+            AssetDatabase.ImportAsset(path);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spritePixelsPerUnit = size;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        // Placeholder Bounce icon: an orange ball hitting something, with a cyan arrow and two impact marks flying away from it.
+        static Sprite EnsureBounceSprite(string path, int size)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null) return existing;
+
+            var ball = new Vector2(0.32f, 0.34f);
+            Vector2 away = new Vector2(1f, 1f).normalized;
+            Vector2 side = new Vector2(-away.y, away.x);
+            Vector2 tail = ball + away * 0.22f, tip = ball + away * 0.62f;
+            Vector2[][] arrow =
+            {
+                new[] { tail + side * 0.035f, tail - side * 0.035f, tip - away * 0.12f - side * 0.035f, tip - away * 0.12f + side * 0.035f }, // shaft
+                new[] { tip, tip - away * 0.17f + side * 0.1f, tip - away * 0.17f - side * 0.1f },                                         // head
+            };
+            Vector2[][] marks =
+            {
+                new[] { ball + side * 0.2f + away * 0.1f, ball + side * 0.26f + away * 0.1f, ball + side * 0.3f + away * 0.26f, ball + side * 0.24f + away * 0.26f },
+                new[] { ball - side * 0.2f + away * 0.1f, ball - side * 0.26f + away * 0.1f, ball - side * 0.3f + away * 0.26f, ball - side * 0.24f + away * 0.26f },
+            };
+
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float r = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                var p = new Vector2((x + 0.5f) / size, (y + 0.5f) / size);
+                Color c = Color.clear;
+                if (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r)) <= r) c = new Color(0.12f, 0.14f, 0.2f);
+                foreach (Vector2[] shape in marks) if (InsidePolygon(p, shape)) c = Color.white;
+                foreach (Vector2[] shape in arrow) if (InsidePolygon(p, shape)) c = new Color(0.4f, 0.85f, 1f);
+                if (Vector2.Distance(p, ball) <= 0.16f) c = new Color(1f, 0.55f, 0.2f);
                 tex.SetPixel(x, y, c);
             }
             File.WriteAllBytes(path, tex.EncodeToPNG());

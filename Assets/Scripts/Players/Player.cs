@@ -24,8 +24,17 @@ namespace GameJam
         /// <summary>The circle that draws this player's trail. A separate child object, independent of the sprite.</summary>
         public TrailEmitter TrailEmitter => trailEmitter != null ? trailEmitter : (trailEmitter = GetComponentInChildren<TrailEmitter>());
 
+        PlayerMovement movement;
+        Rigidbody2D body;
+
+        public PlayerMovement Movement => movement != null ? movement : (movement = GetComponent<PlayerMovement>());
+
         /// <summary>Puts the player back at a position and stops it.</summary>
-        public void ResetTo(Vector3 position) => GetComponent<PlayerMovement>().TeleportTo(position);
+        public void ResetTo(Vector3 position)
+        {
+            contactCooldowns.Clear();
+            Movement.TeleportTo(position);
+        }
 
         public bool MovementEnabled
         {
@@ -59,7 +68,47 @@ namespace GameJam
         public void ClearModifiers()
         {
             modifiers.Clear();
+            contactCooldowns.Clear();
             RefreshStats();
+        }
+
+        // ---- Contact abilities (see PlayerModifier.OnContact) ----
+
+        // When each (ability, other player) pair last acted, for abilities with a cooldown.
+        readonly Dictionary<(PlayerModifier, int), float> contactCooldowns = new Dictionary<(PlayerModifier, int), float>();
+
+        /// <summary>
+        /// True if <paramref name="source"/> may act on <paramref name="other"/> now - and starts its cooldown - or false if it
+        /// did so less than <paramref name="seconds"/> ago. 0 seconds = always.
+        /// </summary>
+        public bool TryStartContactCooldown(PlayerModifier source, Player other, float seconds)
+        {
+            var key = (source, other.Index);
+            float now = Time.time;
+            if (seconds > 0f && contactCooldowns.TryGetValue(key, out float last) && now - last < seconds) return false;
+
+            contactCooldowns[key] = now;
+            return true;
+        }
+
+        // Physics tells the character when it touches something. Only a touch with another player's CURRENT character
+        // counts: ghosts have no collider and no Player component, so they can neither cause nor receive a contact.
+        void OnCollisionEnter2D(Collision2D collision)
+        {
+            if (modifiers.Count == 0) return;
+
+            Player other = collision.collider.GetComponentInParent<Player>();
+            if (other == null || other == this) return;
+            if (!Movement.MovementEnabled || !other.Movement.MovementEnabled) return; // between rounds nothing interacts
+
+            if (body == null) body = GetComponent<Rigidbody2D>();
+            Vector2 selfPosition = body.position;
+            Vector2 offset = other.GetComponent<Rigidbody2D>().position - selfPosition;
+            Vector2 normal = offset.sqrMagnitude > 1e-8f ? offset.normalized : Vector2.right;
+            Vector2 point = collision.contactCount > 0 ? collision.GetContact(0).point : selfPosition + normal * 0.5f * offset.magnitude;
+
+            var contact = new PlayerContact(this, other, normal, point, Movement.LastVelocity, other.Movement.LastVelocity);
+            for (int i = 0; i < modifiers.Count; i++) modifiers[i].OnContact(contact);
         }
 
         void RefreshStats()
