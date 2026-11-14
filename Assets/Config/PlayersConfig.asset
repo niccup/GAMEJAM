@@ -17,8 +17,8 @@ MonoBehaviour:
     maxSpeed: 2
     acceleration: 10
     deceleration: 7
-    turningResponsiveness: 18
-    inertia: 0.4
+    turningResponsiveness: 6.5
+    inertia: 0.562
     brakingStrength: 14
     minimumMovementSpeed: 0.05
     scaleWithSpeedBoost: 1

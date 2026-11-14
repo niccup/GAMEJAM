@@ -272,6 +272,16 @@ namespace GameJam.Editor
                 so.ApplyModifiedPropertiesWithoutUndo();
             });
 
+            Sprite swapIcon = EnsureSwapSprite(ArtDir + "/Modifiers/Swap.png", 128);
+            var swap = EnsureAsset<SwapPowerUp>(ConfigDir + "/Modifiers/Swap.asset", m =>
+            {
+                var so = new SerializedObject(m);
+                so.FindProperty("displayName").stringValue = "Swap";
+                so.FindProperty("description").stringValue = "Trade the movement of one of your ghosts for an opponent's ghost";
+                so.FindProperty("icon").objectReferenceValue = swapIcon;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            });
+
             // The selection screen. An older version of the panel (without the options row) is replaced.
             var view = Object.FindFirstObjectByType<PowerUpOverlay>();
             if (view == null) view = Undo.AddComponent<PowerUpOverlay>(roundOverlay.gameObject);
@@ -297,6 +307,7 @@ namespace GameJam.Editor
             selectionSO.FindProperty("overlay").objectReferenceValue = view;
             AddToPool(selectionSO.FindProperty("pool"), speedBoost);
             AddToPool(selectionSO.FindProperty("pool"), mirror);
+            AddToPool(selectionSO.FindProperty("pool"), swap);
             selectionSO.ApplyModifiedPropertiesWithoutUndo();
 
             var roundSO = new SerializedObject(round);
@@ -474,6 +485,47 @@ namespace GameJam.Editor
                 if (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r)) <= r) c = new Color(0.12f, 0.14f, 0.2f);
                 if (InsidePolygon(p, upperLeft) || InsidePolygon(p, lowerRight)) c = new Color(0.4f, 0.85f, 1f);
                 if (Mathf.Abs(p.x - p.y) < 0.02f && p.x > 0.12f && p.x < 0.88f) c = Color.white;
+                tex.SetPixel(x, y, c);
+            }
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+
+            AssetDatabase.ImportAsset(path);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spritePixelsPerUnit = size;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        // Placeholder Swap icon: two arrows pointing in opposite directions on a dark disc.
+        static Sprite EnsureSwapSprite(string path, int size)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null) return existing;
+
+            Vector2[][] upper =
+            {
+                new[] { new Vector2(0.2f, 0.58f), new Vector2(0.2f, 0.66f), new Vector2(0.6f, 0.66f), new Vector2(0.6f, 0.58f) },
+                new[] { new Vector2(0.58f, 0.5f), new Vector2(0.58f, 0.74f), new Vector2(0.82f, 0.62f) },
+            };
+            Vector2[][] lower =
+            {
+                new[] { new Vector2(0.4f, 0.34f), new Vector2(0.4f, 0.42f), new Vector2(0.8f, 0.42f), new Vector2(0.8f, 0.34f) },
+                new[] { new Vector2(0.42f, 0.26f), new Vector2(0.42f, 0.5f), new Vector2(0.18f, 0.38f) },
+            };
+
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float r = size * 0.5f;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                var p = new Vector2((x + 0.5f) / size, (y + 0.5f) / size);
+                Color c = Color.clear;
+                if (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r)) <= r) c = new Color(0.12f, 0.14f, 0.2f);
+                foreach (Vector2[] shape in upper) if (InsidePolygon(p, shape)) c = new Color(1f, 0.65f, 0.2f);
+                foreach (Vector2[] shape in lower) if (InsidePolygon(p, shape)) c = new Color(0.5f, 0.9f, 0.6f);
                 tex.SetPixel(x, y, c);
             }
             File.WriteAllBytes(path, tex.EncodeToPNG());
