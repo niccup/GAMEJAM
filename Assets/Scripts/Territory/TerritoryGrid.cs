@@ -3,11 +3,14 @@ using UnityEngine;
 namespace GameJam
 {
     /// <summary>
-    /// Pure data model of the arena: a uniform grid of square cells. Every cell stores two independent layers:
-    /// <list type="bullet">
-    /// <item><b>owner</b> - who captured the cell (territory).</item>
-    /// <item><b>trail</b> - whose trail currently covers the cell, plus how far along that player's path it was laid.</item>
-    /// </list>
+    /// Pure data model of the arena: a uniform grid of square cells. A cell has exactly one thing that matters: the
+    /// color (player) it currently shows, or <see cref="None"/>. There is no separate "trail" and "territory" - a captured
+    /// area is just a thick trail, and every colored cell follows the same rules: anyone can overwrite it.
+    /// <para>
+    /// Next to the color, each cell remembers who last <i>stamped</i> it while moving and how far along that path, only so
+    /// a character can tell "the trail I laid a moment ago right behind me" from older colored cells (see
+    /// <see cref="PlayerTrail"/>). Cells filled by a captured loop carry no stamp.
+    /// </para>
     /// Knows nothing about rendering, physics or input. Cells are addressed by a flat index (<c>y * Width + x</c>);
     /// cell (0, 0) is the bottom-left of the map. <see cref="Version"/> changes whenever any cell changes.
     /// </summary>
@@ -15,10 +18,10 @@ namespace GameJam
     {
         public const int None = -1;
 
-        readonly int[] owner;
-        readonly int[] trailOwner;
-        readonly float[] trailDistance;
-        readonly int[] ownedCount;
+        readonly int[] color;
+        readonly int[] stamper;
+        readonly float[] stampDistance;
+        readonly int[] coloredCount;
 
         public int Width { get; }
         public int Height { get; }
@@ -40,11 +43,11 @@ namespace GameJam
             Height = Mathf.Max(1, Mathf.CeilToInt(size.y / CellSize));
             PlayerCount = playerCount;
 
-            owner = new int[CellCount];
-            trailOwner = new int[CellCount];
-            trailDistance = new float[CellCount];
-            ownedCount = new int[playerCount];
-            for (int i = 0; i < owner.Length; i++) owner[i] = trailOwner[i] = None;
+            color = new int[CellCount];
+            stamper = new int[CellCount];
+            stampDistance = new float[CellCount];
+            coloredCount = new int[playerCount];
+            for (int i = 0; i < color.Length; i++) color[i] = stamper[i] = None;
         }
 
         // ---- coordinates -------------------------------------------------------------------------------------
@@ -60,95 +63,58 @@ namespace GameJam
         public Vector2 CellCenter(int x, int y) =>
             new Vector2(Origin.x + (x + 0.5f) * CellSize, Origin.y + (y + 0.5f) * CellSize);
 
-        // ---- territory layer ---------------------------------------------------------------------------------
+        // ---- color layer -------------------------------------------------------------------------------------
 
-        public int GetOwner(int index) => owner[index];
+        /// <summary>Whose color the cell shows, or <see cref="None"/>. The single source of truth for rendering, loops and scoring.</summary>
+        public int GetColorOwner(int index) => color[index];
 
-        public void SetOwner(int index, int player)
-        {
-            int previous = owner[index];
-            if (previous == player) return;
-            if (previous != None) ownedCount[previous]--;
-            if (player != None) ownedCount[player]++;
-            owner[index] = player;
-            Version++;
-        }
-
-        /// <summary>Number of captured cells of a player (handy for scoring).</summary>
-        public int GetOwnedCount(int player) => ownedCount[player];
-
-        // ---- trail layer -------------------------------------------------------------------------------------
-
-        public int GetTrailOwner(int index) => trailOwner[index];
+        /// <summary>Number of cells showing a player's color (trail and captured area alike).</summary>
+        public int GetOwnedCount(int player) => coloredCount[player];
 
         /// <summary>
-        /// Whose color the cell shows: the trail owner if a trail covers it, otherwise the territory owner.
-        /// Trails and territory share one color per player, so this is the cell's single "colored by" answer
-        /// for both rendering and loop detection.
+        /// Colors a cell while a character moves over it, overwriting whatever was there (free cell or any other player's
+        /// color). Remembers who stamped it and how far along its path, see <see cref="GetStamper"/>.
         /// </summary>
-        public int GetColorOwner(int index) => trailOwner[index] != None ? trailOwner[index] : owner[index];
-
-        /// <summary>Path length (world units) the owning player had travelled when this trail cell was laid.</summary>
-        public float GetTrailDistance(int index) => trailDistance[index];
-
-        public void SetTrail(int index, int player, float pathDistance)
+        public void Stamp(int index, int player, int source, float pathDistance)
         {
-            trailOwner[index] = player;
-            trailDistance[index] = pathDistance;
-            Version++;
+            stamper[index] = source;
+            stampDistance[index] = pathDistance;
+            Paint(index, player);
         }
 
-        /// <summary>Removes the trail (any player's) from one cell.</summary>
-        public void ClearTrail(int index)
+        /// <summary>Colors a cell as part of a captured area, overwriting whatever was there. Carries no stamp.</summary>
+        public void Fill(int index, int player)
         {
-            if (trailOwner[index] == None) return;
-            trailOwner[index] = None;
-            Version++;
+            stamper[index] = None;
+            Paint(index, player);
         }
 
-        /// <summary>
-        /// Turns every trail cell of a player into territory of the same player. Nothing disappears: the cells keep
-        /// their color, they just stop being "trail" (so other players' trails no longer interrupt them).
-        /// Returns how many cells were converted.
-        /// </summary>
-        public int CommitTrails(int player)
-        {
-            int converted = 0;
-            for (int i = 0; i < trailOwner.Length; i++)
-            {
-                if (trailOwner[i] != player) continue;
-                trailOwner[i] = None;
-                SetOwner(i, player);
-                converted++;
-            }
-            if (converted > 0) Version++;
-            return converted;
-        }
+        /// <summary>Which trail source (one character) last stamped this cell, or <see cref="None"/> for free and filled cells.</summary>
+        public int GetStamper(int index) => stamper[index];
 
-        /// <summary>Empties the whole grid: no territory, no trails. Used to start a new round.</summary>
+        /// <summary>Path length (world units) the stamping source had travelled when it stamped this cell.</summary>
+        public float GetStampDistance(int index) => stampDistance[index];
+
+        /// <summary>Empties the whole grid. Used to start a new round.</summary>
         public void Clear()
         {
-            for (int i = 0; i < owner.Length; i++)
+            for (int i = 0; i < color.Length; i++)
             {
-                owner[i] = trailOwner[i] = None;
-                trailDistance[i] = 0f;
+                color[i] = stamper[i] = None;
+                stampDistance[i] = 0f;
             }
-            System.Array.Clear(ownedCount, 0, ownedCount.Length);
+            System.Array.Clear(coloredCount, 0, coloredCount.Length);
             Version++;
         }
 
-        /// <summary>Removes every trail cell of one player without capturing them (e.g. if a player is eliminated). Returns how many were removed.</summary>
-        public int ClearTrailsOf(int player)
+        void Paint(int index, int player)
         {
-            int removed = 0;
-            for (int i = 0; i < trailOwner.Length; i++)
-            {
-                if (trailOwner[i] != player) continue;
-                trailOwner[i] = None;
-                removed++;
-            }
-            if (removed > 0) Version++;
-            return removed;
+            int previous = color[index];
+            if (previous == player) return;
+            if (previous != None) coloredCount[previous]--;
+            coloredCount[player]++;
+            color[index] = player;
+            Version++;
         }
     }
 }

@@ -12,6 +12,9 @@ namespace GameJam
         TrailEmitter trailEmitter;
 
         public int Index { get; private set; }
+
+        /// <summary>The renderer of the character's sprite (used e.g. to build matching ghosts).</summary>
+        public SpriteRenderer SpriteRenderer => spriteRenderer;
         public PlayerInput PlayerInput { get; private set; }
 
         /// <summary>The player's main color (territory color; the trail uses a shade of it).</summary>

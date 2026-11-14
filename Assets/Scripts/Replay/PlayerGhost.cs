@@ -1,0 +1,72 @@
+using UnityEngine;
+
+namespace GameJam
+{
+    /// <summary>
+    /// A previous-round character: replays one <see cref="MovementRecording"/> on the round clock. No input, no physics,
+    /// nothing to collide with - it only follows the recorded path and carries a <see cref="TrailEmitter"/> that is
+    /// registered with the <see cref="TerritorySystem"/> for the owning player, so its trail and captures are the
+    /// player's own. Built from the owner's look (sprite, scale, trail radius) by <see cref="Create"/>.
+    /// </summary>
+    public class PlayerGhost : MonoBehaviour
+    {
+        MovementRecording recording;
+        SpriteRenderer spriteRenderer;
+        bool hideWhenFinished;
+
+        public int PlayerIndex { get; private set; }
+        public TrailEmitter TrailEmitter { get; private set; }
+
+        /// <summary>True once the round clock has passed the end of the recorded path.</summary>
+        public bool Finished { get; private set; }
+
+        /// <summary>Builds a ghost that looks like <paramref name="owner"/> but in <paramref name="color"/> and replays <paramref name="recording"/>.</summary>
+        public static PlayerGhost Create(Player owner, MovementRecording recording, Color color, int sortingOrderOffset,
+            bool hideWhenFinished, string name, Transform parent)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localScale = owner.transform.localScale;
+
+            var ghost = go.AddComponent<PlayerGhost>();
+            ghost.PlayerIndex = owner.Index;
+            ghost.recording = recording;
+            ghost.hideWhenFinished = hideWhenFinished;
+
+            SpriteRenderer source = owner.SpriteRenderer;
+            ghost.spriteRenderer = go.AddComponent<SpriteRenderer>();
+            if (source != null)
+            {
+                ghost.spriteRenderer.sprite = source.sprite;
+                ghost.spriteRenderer.sharedMaterial = source.sharedMaterial;
+                ghost.spriteRenderer.sortingLayerID = source.sortingLayerID;
+                ghost.spriteRenderer.sortingOrder = source.sortingOrder + sortingOrderOffset;
+            }
+            ghost.spriteRenderer.color = color;
+
+            // Same emitter as the owner's: same offset and thickness, so the ghost's trail looks exactly like the player's.
+            TrailEmitter ownerEmitter = owner.TrailEmitter;
+            var emitterGo = new GameObject("TrailEmitter");
+            emitterGo.transform.SetParent(go.transform, false);
+            if (ownerEmitter != null) emitterGo.transform.localPosition = ownerEmitter.transform.localPosition;
+            ghost.TrailEmitter = emitterGo.AddComponent<TrailEmitter>();
+            if (ownerEmitter != null) ghost.TrailEmitter.Radius = ownerEmitter.Radius;
+
+            ghost.Apply(0f);
+            return ghost;
+        }
+
+        /// <summary>Puts the ghost where the recorded character was at <paramref name="roundTime"/> seconds into the round.</summary>
+        public void Apply(float roundTime)
+        {
+            if (!recording.Evaluate(roundTime, out Vector2 position, out bool emitting)) return;
+
+            Finished = roundTime > recording.Duration;
+            transform.position = new Vector3(position.x, position.y, transform.position.z);
+
+            // After its path ends the ghost stops drawing (it would otherwise keep re-claiming the cells it stands on).
+            TrailEmitter.Emitting = emitting && !Finished;
+            spriteRenderer.enabled = !(Finished && hideWhenFinished);
+        }
+    }
+}

@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: TerritoryConfig
   m_EditorClassIdentifier: Assembly-CSharp::GameJam.TerritoryConfig
   cellSize: 0.1
-  minLoopLength: 1
+  minLoopLength: 0.1
   alpha: 0.5
   sortingOrder: -50

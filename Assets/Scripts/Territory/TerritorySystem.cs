@@ -5,24 +5,33 @@ using UnityEngine;
 namespace GameJam
 {
     /// <summary>
-    /// Scene glue for the territory mechanic. Creates the grid over the map, registers players as the spawner
-    /// creates them, and every frame feeds each player's <see cref="TrailEmitter"/> position to the
-    /// <see cref="TerritoryEngine"/>. Contains no capture logic and no drawing - see <see cref="TerritoryRenderer"/>
-    /// for the visuals. Subscribe to <see cref="LoopClosed"/> for scoring, sound, effects.
+    /// Scene glue for the coloring mechanic (trails and captured areas are the same colored pixels). Creates the grid over the map, registers players as the spawner
+    /// creates them, and every frame feeds each registered <see cref="TrailEmitter"/> position to the
+    /// <see cref="TerritoryEngine"/>. Besides players' own emitters, other emitters (e.g. replayed ghosts) can be added
+    /// with <see cref="AddEmitter"/>: they draw for a given player exactly like that player's character does.
+    /// Contains no capture logic and no drawing - see <see cref="TerritoryRenderer"/> for the visuals.
+    /// Subscribe to <see cref="LoopClosed"/> for scoring, sound, effects.
     /// </summary>
     public class TerritorySystem : MonoBehaviour
     {
+        sealed class Source
+        {
+            public TrailEmitter Emitter;
+            public int Actor;
+        }
+
         [SerializeField] MapView map;
         [SerializeField] PlayerSpawner spawner;
         [SerializeField] TerritoryConfig config;
 
-        readonly List<Player> players = new List<Player>();
+        readonly List<Source> sources = new List<Source>();
+        readonly HashSet<TrailEmitter> registered = new HashSet<TrailEmitter>();
 
         public TerritoryEngine Engine { get; private set; }
         public TerritoryGrid Grid { get; private set; }
         public TerritoryPalette Palette { get; private set; }
 
-        /// <summary>While false the territory is frozen: trails are not laid and no loops can close (e.g. between rounds).</summary>
+        /// <summary>While false the map is frozen: nothing is colored and no loops can close (e.g. between rounds).</summary>
         public bool Running { get; set; } = true;
 
         /// <summary>Raised when a player closes a loop: (player index, cells captured).</summary>
@@ -45,12 +54,31 @@ namespace GameJam
 
         void OnDisable() => spawner.PlayerSpawned -= Register;
 
-        /// <summary>Wipes all territory and trails (new round).</summary>
+        /// <summary>Wipes all colored cells (new round). Registered emitters stay registered.</summary>
         public void ResetTerritory() => Engine.Reset();
+
+        /// <summary>
+        /// Makes an emitter draw trail and capture territory for a player, in that player's color.
+        /// Use it for additional characters of a player (e.g. ghosts). Does nothing if the emitter is already registered.
+        /// </summary>
+        public void AddEmitter(TrailEmitter emitter, int player)
+        {
+            if (emitter == null || !registered.Add(emitter)) return;
+            sources.Add(new Source { Emitter = emitter, Actor = Engine.AddActor(player) });
+        }
+
+        /// <summary>Stops drawing for an emitter added with <see cref="AddEmitter"/>. Call it when the map is reset or before destroying the emitter.</summary>
+        public void RemoveEmitter(TrailEmitter emitter)
+        {
+            if (emitter == null || !registered.Remove(emitter)) return;
+            int index = sources.FindIndex(s => s.Emitter == emitter);
+            Engine.RemoveActor(sources[index].Actor);
+            sources.RemoveAt(index);
+        }
 
         void Register(Player player)
         {
-            if (players.Contains(player)) return;
+            if (registered.Contains(player.TrailEmitter)) return;
             if (player.TrailEmitter == null)
             {
                 Debug.LogWarning($"{player.name} has no TrailEmitter child, so it leaves no trail. Run Tools > GameJam > Setup Scene.", player);
@@ -58,7 +86,7 @@ namespace GameJam
             }
 
             Palette.SetPlayerColor(player.Index, player.Color);
-            players.Add(player);
+            AddEmitter(player.TrailEmitter, player.Index);
         }
 
         // LateUpdate: players move in physics and are interpolated, so their final position for the frame is known here.
@@ -66,11 +94,11 @@ namespace GameJam
         {
             if (!Running) return;
 
-            foreach (Player player in players)
+            foreach (Source source in sources)
             {
-                TrailEmitter emitter = player.TrailEmitter;
-                if (emitter.Emitting) Engine.Step(player.Index, emitter.Position, emitter.Radius);
-                else Engine.BreakPath(player.Index);
+                TrailEmitter emitter = source.Emitter;
+                if (emitter.Emitting) Engine.Step(source.Actor, emitter.Position, emitter.Radius);
+                else Engine.BreakPath(source.Actor);
             }
         }
     }

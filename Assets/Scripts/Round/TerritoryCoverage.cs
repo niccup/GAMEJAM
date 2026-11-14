@@ -2,7 +2,7 @@ namespace GameJam
 {
     /// <summary>
     /// Measures how much of the map each player's color covers. A cell counts for a player when it shows that player's
-    /// color - captured territory <i>or</i> trail - exactly what the <see cref="TerritoryRenderer"/> draws.
+    /// color - there is no difference between trail and captured area - exactly what the <see cref="TerritoryRenderer"/> draws.
     /// Plain C#, no Unity dependencies besides the grid. Call <see cref="Refresh"/> before reading; it only recounts
     /// when the grid has changed.
     /// </summary>
@@ -33,20 +33,17 @@ namespace GameJam
         /// <summary>Fraction (0..1) of the whole map showing this player's color.</summary>
         public float GetFraction(int player) => (float)cells[player] / TotalCells;
 
-        /// <summary>Recounts the grid if it changed since the last call.</summary>
+        /// <summary>Re-reads the per-player counts if the grid changed since the last call.</summary>
         public void Refresh()
         {
             if (grid.Version == countedVersion) return;
             countedVersion = grid.Version;
 
-            System.Array.Clear(cells, 0, cells.Length);
             int covered = 0;
-            for (int i = 0; i < grid.CellCount; i++)
+            for (int player = 0; player < cells.Length; player++)
             {
-                int colorOwner = grid.GetColorOwner(i);
-                if (colorOwner == TerritoryGrid.None) continue;
-                cells[colorOwner]++;
-                covered++;
+                cells[player] = grid.GetOwnedCount(player);
+                covered += cells[player];
             }
             CoveredCells = covered;
         }

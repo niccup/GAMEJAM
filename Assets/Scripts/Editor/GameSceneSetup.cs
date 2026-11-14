@@ -169,6 +169,9 @@ namespace GameJam.Editor
             roundSO.FindProperty("overlay").objectReferenceValue = overlay;
             roundSO.ApplyModifiedPropertiesWithoutUndo();
 
+            EnsureOverlayTitle(overlay);
+            EnsureReplay(round, territory, spawner);
+
             var timer = Object.FindFirstObjectByType<RoundTimerDisplay>();
             if (timer == null)
             {
@@ -184,6 +187,44 @@ namespace GameJam.Editor
                 timerSO.FindProperty("label").objectReferenceValue = label;
                 timerSO.ApplyModifiedPropertiesWithoutUndo();
             }
+        }
+
+        // Ghost replays of previous rounds: records every player and replays the saved paths in later rounds.
+        static void EnsureReplay(RoundManager round, TerritorySystem territory, PlayerSpawner spawner)
+        {
+            var replay = Object.FindFirstObjectByType<ReplayManager>();
+            if (replay == null)
+            {
+                var go = new GameObject("Replay");
+                Undo.RegisterCreatedObjectUndo(go, "Create Replay");
+                replay = go.AddComponent<ReplayManager>();
+            }
+            var so = new SerializedObject(replay);
+            so.FindProperty("round").objectReferenceValue = round;
+            so.FindProperty("spawner").objectReferenceValue = spawner;
+            so.FindProperty("territory").objectReferenceValue = territory;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // "Round 2 / 4" / "Final Results" heading above the Next Round button.
+        static void EnsureOverlayTitle(RoundEndOverlay overlay)
+        {
+            var so = new SerializedObject(overlay);
+            SerializedProperty title = so.FindProperty("titleLabel");
+            if (title.objectReferenceValue != null) return;
+
+            Transform panel = so.FindProperty("panel").objectReferenceValue != null
+                ? ((GameObject)so.FindProperty("panel").objectReferenceValue).transform
+                : overlay.transform;
+            TMP_Text label = CreateText("TitleLabel", panel, "Round 1 / 4", 64, TextAlignmentOptions.Center);
+            label.raycastTarget = false;
+            RectTransform rt = label.rectTransform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(0f, 140f);
+            rt.sizeDelta = new Vector2(800f, 90f);
+
+            title.objectReferenceValue = label;
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         static void BuildOverlay(RoundEndOverlay overlay)

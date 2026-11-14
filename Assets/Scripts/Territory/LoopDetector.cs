@@ -6,9 +6,11 @@ namespace GameJam
     /// <summary>
     /// Decides whether a player's color encloses an area and which cells that area consists of.
     /// <para>
-    /// Trails and territory are the same color, so a "wall" is any cell currently showing the player's color - captured
-    /// territory and trail alike. That lets a new loop be built from any existing piece of the player's own color.
-    /// A cell covered by another player's trail does not show the player's color, so such a trail punches a hole in the wall.
+    /// There is one kind of colored cell, so a "wall" is simply any cell currently showing the player's color, however
+    /// it came to be (fresh trail, old trail, a previously captured area). That lets a new loop be built from any
+    /// existing piece of the player's own color. A cell that an opponent has overwritten no longer shows the player's
+    /// color, so an opponent's line cuts the wall; the pieces on either side can't form a loop together until the player
+    /// reconnects them with their own color.
     /// </para>
     /// Method: flood-fill (4-connected) from every cell on the grid's border over non-wall cells. Whatever the flood
     /// cannot reach is enclosed. A 4-connected flood cannot squeeze through a diagonal line of cells, so thin lines are
@@ -28,9 +30,8 @@ namespace GameJam
         }
 
         /// <summary>
-        /// Fills <paramref name="result"/> with the enclosed cells that have to change when the loop is captured:
-        /// cells that are not yet the player's territory (free cells and other players' territory alike, since a loop
-        /// takes over everything inside it) and cells covered by another player's trail (which gets removed).
+        /// Fills <paramref name="result"/> with every enclosed cell that does not show the player's color yet: free cells
+        /// and cells of other players alike, since a loop takes over everything inside it.
         /// Returns the number of cells (0 = nothing to capture).
         /// </summary>
         public int FindLoopCells(int player, List<int> result)
@@ -62,11 +63,7 @@ namespace GameJam
             }
 
             for (int i = 0; i < reachable.Length; i++)
-            {
-                bool enclosed = !reachable[i] && grid.GetColorOwner(i) != player;
-                // A cell showing another player's trail always counts, even over our own territory: the trail must go.
-                if (enclosed && (grid.GetOwner(i) != player || grid.GetTrailOwner(i) != TerritoryGrid.None)) result.Add(i);
-            }
+                if (!reachable[i] && grid.GetColorOwner(i) != player) result.Add(i);
 
             return result.Count;
         }

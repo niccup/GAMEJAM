@@ -3,8 +3,8 @@ using UnityEngine;
 namespace GameJam
 {
     /// <summary>
-    /// Draws the <see cref="TerritoryGrid"/>: one texture pixel per cell in the color of whoever
-    /// holds it (trail on top of territory; both share the player's color). Purely a view - replace or extend it (shaders, outlines,
+    /// Draws the <see cref="TerritoryGrid"/>: one texture pixel per cell in the color the cell
+    /// shows (trail and captured area are the same colored cells). Purely a view - replace or extend it (shaders, outlines,
     /// animations) without touching the mechanics. Runs after <see cref="TerritorySystem"/> in the frame.
     /// </summary>
     [DefaultExecutionOrder(100)]
