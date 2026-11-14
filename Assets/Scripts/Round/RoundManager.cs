@@ -22,6 +22,8 @@ namespace GameJam
         [SerializeField] PlayerSpawner spawner;
         [Tooltip("Optional. Shown when the round ends; its Next Round button starts the next round.")]
         [SerializeField] RoundEndOverlay overlay;
+        [Tooltip("Provides the scores the end-of-round screen shows. Required for the overlay.")]
+        [SerializeField] ScoreManager scores;
 
         [Header("Game")]
         [Tooltip("Number of consecutive rounds the game consists of. After the last one the final results are shown and no new round starts.")]
@@ -146,9 +148,10 @@ namespace GameJam
             EndReason = reason;
             SetFrozen(true);
 
-            if (overlay != null) overlay.Show(coverage, spawner.Config, CurrentRound, maxRounds);
+            // Listeners first (the ScoreManager stores this round's result), then the screen that displays the scores.
             RoundEnded?.Invoke(reason);
             onRoundEnded?.Invoke(reason);
+            if (overlay != null && scores != null) overlay.Show(scores, CurrentRound, maxRounds);
 
             if (IsFinalRound)
             {

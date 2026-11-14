@@ -171,6 +171,7 @@ namespace GameJam.Editor
 
             EnsureOverlayTitle(overlay);
             EnsureReplay(round, territory, spawner);
+            ScoreManager scores = EnsureScores(round, spawner, overlay);
 
             var timer = Object.FindFirstObjectByType<RoundTimerDisplay>();
             if (timer == null)
@@ -204,6 +205,44 @@ namespace GameJam.Editor
             so.FindProperty("spawner").objectReferenceValue = spawner;
             so.FindProperty("territory").objectReferenceValue = territory;
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // Cumulative + per-map scores: the ScoreManager keeps them (also during play) and only the between-round screens display them.
+        static ScoreManager EnsureScores(RoundManager round, PlayerSpawner spawner, RoundEndOverlay overlay)
+        {
+            var scores = Object.FindFirstObjectByType<ScoreManager>();
+            if (scores == null)
+            {
+                var go = new GameObject("Score");
+                Undo.RegisterCreatedObjectUndo(go, "Create Score");
+                scores = go.AddComponent<ScoreManager>();
+            }
+            var so = new SerializedObject(scores);
+            so.FindProperty("round").objectReferenceValue = round;
+            so.FindProperty("spawner").objectReferenceValue = spawner;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var roundSO = new SerializedObject(round);
+            roundSO.FindProperty("scores").objectReferenceValue = scores;
+            roundSO.ApplyModifiedPropertiesWithoutUndo();
+
+            // "Winner: Player 2" / "Tie: ..." line on the final screen, in the spot of the hidden Next Round button.
+            var overlaySO = new SerializedObject(overlay);
+            if (overlaySO.FindProperty("winnerLabel").objectReferenceValue == null)
+            {
+                var panelObj = overlaySO.FindProperty("panel").objectReferenceValue as GameObject;
+                TMP_Text label = CreateText("WinnerLabel", panelObj != null ? panelObj.transform : overlay.transform,
+                    "Winner: Player 1", 72, TextAlignmentOptions.Center);
+                label.raycastTarget = false;
+                RectTransform rt = label.rectTransform;
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = Vector2.zero;
+                rt.sizeDelta = new Vector2(1200f, 120f);
+                label.gameObject.SetActive(false);
+                overlaySO.FindProperty("winnerLabel").objectReferenceValue = label;
+                overlaySO.ApplyModifiedPropertiesWithoutUndo();
+            }
+            return scores;
         }
 
         // "Round 2 / 4" / "Final Results" heading above the Next Round button.
@@ -243,7 +282,7 @@ namespace GameJam.Editor
             rowRt.anchorMax = new Vector2(1f, 1f);
             rowRt.pivot = new Vector2(0.5f, 1f);
             rowRt.anchoredPosition = new Vector2(0f, -80f);
-            rowRt.sizeDelta = new Vector2(-200f, 220f);
+            rowRt.sizeDelta = new Vector2(-200f, 260f);
             var layout = row.GetComponent<HorizontalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childControlWidth = layout.childControlHeight = true;
@@ -253,7 +292,7 @@ namespace GameJam.Editor
             var labels = new TMP_Text[PlayersConfig.MaxPlayers];
             for (int i = 0; i < labels.Length; i++)
             {
-                labels[i] = CreateText($"Percent_P{i + 1}", row.transform, $"P{i + 1}\n0.0%", 72, TextAlignmentOptions.Center);
+                labels[i] = CreateText($"Percent_P{i + 1}", row.transform, $"P{i + 1}\n0.0%", 56, TextAlignmentOptions.Center);
                 labels[i].raycastTarget = false;
             }
 
