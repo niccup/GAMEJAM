@@ -118,6 +118,28 @@ namespace GameJam
             return loser;
         }
 
+        /// <summary>
+        /// The active players ordered by their share of the current map, smallest first (the power-up draft order). Equal
+        /// shares are ordered by player number, so the result is always the same for the same map. Cumulative scores play no
+        /// part. Call it once when the draft starts and keep the result: it is a snapshot.
+        /// </summary>
+        public List<int> GetCurrentMapOrderAscending()
+        {
+            int active = ActivePlayerCount;
+            var order = new List<(int player, float percent)>(active);
+            for (int i = 0; i < active; i++) order.Add((i, GetCurrentMapPercent(i)));
+
+            order.Sort((a, b) =>
+            {
+                int byPercent = a.percent.CompareTo(b.percent);
+                return byPercent != 0 ? byPercent : a.player.CompareTo(b.player);
+            });
+
+            var result = new List<int>(active);
+            foreach (var entry in order) result.Add(entry.player);
+            return result;
+        }
+
         void OnRoundEnded(RoundEndReason reason)
         {
             // The coverage is final at this point. Store every player's share of the map for this round.

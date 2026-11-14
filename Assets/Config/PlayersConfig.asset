@@ -39,7 +39,7 @@ MonoBehaviour:
   - controlScheme: Gamepad
     color: {r: 0.95, g: 0.8, b: 0.3, a: 1}
     spriteOverride: {fileID: 0}
-  keyboardTestMode: 0
+  keyboardTestMode: 1
   keyboardTestSchemes:
   - Keyboard
   - KeyboardArrows

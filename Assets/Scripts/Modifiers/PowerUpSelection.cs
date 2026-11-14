@@ -5,9 +5,11 @@ using UnityEngine;
 namespace GameJam
 {
     /// <summary>
-    /// The power-up selection between rounds. <see cref="Begin"/> takes the players who may choose (today: the loser of
-    /// the round that just ended) and gives each of them a turn, one after another. A turn starts with the
-    /// <see cref="OfferStep"/> listing the pool; a power-up either applies at once or opens further
+    /// The power-up draft between rounds. <see cref="Begin"/> takes the players in pick order (the caller decides it once:
+    /// today the smallest share of the finished map first) and gives each of them exactly one turn, one after another. A
+    /// draft starts with the whole pool; whatever a player takes is removed for everyone after them, and the next draft
+    /// starts from the whole pool again. A turn starts with the <see cref="OfferStep"/> listing what is left; a power-up
+    /// either applies at once or opens further
     /// <see cref="SelectionStep"/>s (Mirror: player, ghost, confirm). Only the current chooser's own input is read
     /// ("Action" confirms, "Move" left / right cycles, "Move" down goes back - the bindings are whatever you set in the
     /// Input Actions asset), so nobody else can take part. When the last turn is complete the callback passed to Begin
@@ -29,7 +31,7 @@ namespace GameJam
         [SerializeField] PowerUpOverlay overlay;
 
         [Header("Offer")]
-        [Tooltip("The power-ups offered to the chooser, in the order they are shown.")]
+        [Tooltip("Every power-up a draft starts with, in the order they are shown. Add an asset here to offer something new.")]
         [SerializeField] PowerUp[] pool;
 
         [Header("Input")]
@@ -50,9 +52,11 @@ namespace GameJam
         [SerializeField, Min(1f)] float previewFrameBudgetMilliseconds = 6f;
 
         readonly Queue<Player> waiting = new Queue<Player>();
+        readonly List<PowerUp> remaining = new List<PowerUp>();
         readonly List<SelectionStep> stack = new List<SelectionStep>();
 
         PowerUpContext context;
+        int draftSize;
         SelectionInput input;
         Action onFinished;
         SelectionMarkers markers;
@@ -83,8 +87,9 @@ namespace GameJam
         }
 
         /// <summary>
-        /// Gives every player in <paramref name="choosers"/> a turn, in order. <paramref name="finished"/> is called once
-        /// the last turn is complete (at once if nobody has anything to take).
+        /// Starts a new draft: every player in <paramref name="choosers"/> gets exactly one turn, in the order given (the
+        /// order is not recomputed). The pool starts full - nothing carries over from an earlier draft.
+        /// <paramref name="finished"/> is called once the last turn is complete (at once if nobody can take anything).
         /// </summary>
         public void Begin(IReadOnlyList<Player> choosers, Action finished)
         {
@@ -92,7 +97,13 @@ namespace GameJam
 
             waiting.Clear();
             foreach (Player player in choosers)
-                if (player != null) waiting.Enqueue(player);
+                if (player != null && !waiting.Contains(player)) waiting.Enqueue(player);
+
+            remaining.Clear();
+            foreach (PowerUp powerUp in pool)
+                if (powerUp != null) remaining.Add(powerUp);
+
+            draftSize = waiting.Count;
 
             onFinished = finished;
             IsActive = true;
@@ -109,11 +120,18 @@ namespace GameJam
 
         void OnDisable() => EndTurn();
 
-        // Starts the turn of the next waiting player that has something to take. False if there is none.
+        // Starts the turn of the next waiting player. A player who cannot be asked (no input actions) or when no power-up
+        // is left at all is passed over. False if no turn is left.
         bool StartNextTurn()
         {
             while (waiting.Count > 0)
             {
+                if (remaining.Count == 0)
+                {
+                    waiting.Clear(); // the pool is used up: the rest of the draft has nothing to pick from
+                    break;
+                }
+
                 Player chooser = waiting.Dequeue();
                 SelectionInput chooserInput = SelectionInput.Create(chooser, moveActionName, actionName, inputDelay);
                 if (chooserInput == null)
@@ -123,8 +141,10 @@ namespace GameJam
                 }
 
                 var turn = new PowerUpContext(chooser, spawner, map, replay, overlay, markers, preview, Push, Back, Complete);
-                var offer = new OfferStep(turn, pool);
-                if (!offer.HasOptions) continue;
+                turn.DraftPosition = draftSize - waiting.Count;
+                turn.DraftSize = draftSize;
+                var offer = new OfferStep(turn, remaining);
+                if (!offer.HasAnyPowerUp) continue;
 
                 context = turn;
                 input = chooserInput;
@@ -153,6 +173,8 @@ namespace GameJam
 
         void Complete()
         {
+            // A taken power-up is gone for every later player of this draft (a skipped turn took nothing).
+            if (context != null && context.Picked != null) remaining.Remove(context.Picked);
             EndTurn();
             if (!StartNextTurn()) Finish();
         }
