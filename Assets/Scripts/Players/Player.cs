@@ -129,11 +129,17 @@ namespace GameJam
             if (spriteRenderer != null)
             {
                 if (slot.spriteOverride != null) spriteRenderer.sprite = slot.spriteOverride;
-                spriteRenderer.color = Color;
+                spriteRenderer.color = Color.white;
             }
 
             GetComponent<PlayerMovement>().Configure(config.movement);
             RefreshStats();
+        }
+
+        void LateUpdate()
+        {
+            if (spriteRenderer != null && spriteRenderer.color != Color.white)
+                spriteRenderer.color = Color.white;
         }
     }
 }

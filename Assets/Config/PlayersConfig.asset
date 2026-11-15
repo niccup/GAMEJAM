@@ -29,16 +29,16 @@ MonoBehaviour:
   slots:
   - controlScheme: Keyboard
     color: {r: 1, g: 1, b: 1, a: 1}
-    spriteOverride: {fileID: 6937817954938267909, guid: 5539594df1f50e845ae46e6a3bd1832e, type: 3}
+    spriteOverride: {fileID: 4159916404999561967, guid: 0cf577c97eb42774385617c07f2e399a, type: 3}
   - controlScheme: Gamepad
     color: {r: 1, g: 1, b: 1, a: 1}
-    spriteOverride: {fileID: -855298285791758126, guid: 0cdb6f6b9ca6e0e4cad5b24536ddd143, type: 3}
+    spriteOverride: {fileID: 276975633828264490, guid: 42f84c18de47ed94281ff4d68f1fb80c, type: 3}
   - controlScheme: Gamepad
     color: {r: 1, g: 1, b: 1, a: 1}
-    spriteOverride: {fileID: -6470460504253458178, guid: 5206a8f338881014c840f46efc0da637, type: 3}
+    spriteOverride: {fileID: 2480167839288743307, guid: cb8a2931c40246d4abf6b446fd5f8951, type: 3}
   - controlScheme: Gamepad
     color: {r: 1, g: 1, b: 1, a: 1}
-    spriteOverride: {fileID: -4178046375966092550, guid: 35b83003cafa956408030debd7b7d253, type: 3}
+    spriteOverride: {fileID: -951650043582475695, guid: bd48e47676700794cb688bb32ab49bb9, type: 3}
   keyboardTestMode: 1
   keyboardTestSchemes:
   - Keyboard
