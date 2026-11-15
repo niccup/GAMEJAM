@@ -43,7 +43,7 @@ namespace GameJam
                 if (spawn == null) continue;
 
                 bool canChoose = i < available.Count && available[i];
-                Color color = i < config.slots.Length ? config.slots[i].color : Color.white;
+                Color color = config.GetPlayerColor(i);
                 color.a = canChoose ? 1f : 0.3f;
                 rings[i].color = color;
                 rings[i].transform.position = spawn.position;
@@ -96,7 +96,7 @@ namespace GameJam
             }
 
             arrow.transform.position = new Vector3(spawn.position.x, tipY, 0f);
-            arrow.color = config.slots[selected].color;
+            arrow.color = config.GetPlayerColor(selected);
         }
     }
 }

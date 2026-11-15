@@ -124,12 +124,12 @@ namespace GameJam
             PlayerInput = GetComponent<PlayerInput>();
 
             PlayerSlot slot = config.slots[index];
-            Color = slot.color;
+            Color = config.GetPlayerColor(index); // the color of the character this player picked on the selection screen
 
             if (spriteRenderer != null)
             {
                 if (slot.spriteOverride != null) spriteRenderer.sprite = slot.spriteOverride;
-                spriteRenderer.color = slot.color;
+                spriteRenderer.color = Color;
             }
 
             GetComponent<PlayerMovement>().Configure(config.movement);

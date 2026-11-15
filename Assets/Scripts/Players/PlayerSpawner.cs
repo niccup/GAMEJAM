@@ -45,7 +45,8 @@ namespace GameJam
 
             GameObject prefab = config.playerPrefab.gameObject;
             string scheme = config.GetControlScheme(index);
-            InputDevice[] devices = ClaimDevices(prefab.GetComponent<PlayerInput>().actions, scheme, index);
+            // The player keeps the devices they used on the character selection screen; without it, the next free devices of the scheme.
+            InputDevice[] devices = TakeSelectionDevices(index) ?? ClaimDevices(prefab.GetComponent<PlayerInput>().actions, scheme, index);
 
             WarnIfRadiusMismatch(index);
 
@@ -96,40 +97,34 @@ namespace GameJam
                 Debug.LogWarning($"Player radius ({radius}) differs from map corner radius ({map.CornerRadius}); players won't fit the corners exactly.", this);
         }
 
+        // The devices the player used on the character selection screen, as long as they are all still connected (null: none stored).
+        InputDevice[] TakeSelectionDevices(int index)
+        {
+            if (!GameSession.TryGetSelection(index, out PlayerSelection selection)) return null;
+
+            InputDevice[] chosen = selection.Devices;
+            if (chosen == null || chosen.Length == 0) return null;
+            foreach (InputDevice device in chosen)
+                if (device == null || !device.added) return null;
+
+            foreach (InputDevice device in chosen) claimedDevices.Add(device);
+            return chosen;
+        }
+
         InputDevice[] ClaimDevices(InputActionAsset actions, string schemeName, int playerIndex)
         {
-            var result = new List<InputDevice>();
             InputControlScheme? scheme = actions.FindControlScheme(schemeName);
             if (scheme == null)
             {
                 Debug.LogWarning($"Control scheme '{schemeName}' not found for player {playerIndex + 1}.", this);
-                return result.ToArray();
+                return new InputDevice[0];
             }
 
-            foreach (var requirement in scheme.Value.deviceRequirements)
-            {
-                InputDevice match = null;
-                foreach (InputDevice device in InputSystem.devices)
-                {
-                    // Test mode shares the keyboard between players (each with its own control scheme).
-                    if (!config.keyboardTestMode && claimedDevices.Contains(device)) continue;
-                    if (!InputControlPath.Matches(requirement.controlPath, device)) continue;
-                    match = device;
-                    break;
-                }
-
-                if (match != null)
-                {
-                    claimedDevices.Add(match);
-                    result.Add(match);
-                }
-                else if (!requirement.isOptional)
-                {
-                    Debug.LogWarning($"Player {playerIndex + 1}: no free device for '{requirement.controlPath}' ({schemeName}).", this);
-                }
-            }
-
-            return result.ToArray();
+            // Test mode shares the keyboard between players (each with its own control scheme).
+            InputDevice[] devices = PlayerDevices.Claim(scheme.Value, claimedDevices, config.keyboardTestMode, out string missing);
+            if (missing != null)
+                Debug.LogWarning($"Player {playerIndex + 1}: no free device for '{missing}' ({schemeName}).", this);
+            return devices;
         }
     }
 }

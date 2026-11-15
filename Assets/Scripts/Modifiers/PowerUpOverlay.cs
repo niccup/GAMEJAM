@@ -78,7 +78,7 @@ namespace GameJam
             if (titleLabel != null)
             {
                 titleLabel.text = title;
-                titleLabel.color = titleColor;
+                PlayerColorText.Apply(titleLabel, titleColor);
             }
             if (hintLabel != null) hintLabel.text = hint;
         }

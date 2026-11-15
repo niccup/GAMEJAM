@@ -96,9 +96,9 @@ namespace GameJam
 
                 if (tintLabelsWithPlayerColor && players != null && i < players.slots.Length)
                 {
-                    Color color = players.slots[i].color;
+                    Color color = players.GetPlayerColor(i);
                     color.a = 1f;
-                    label.color = color;
+                    PlayerColorText.Apply(label, color);
                 }
             }
 

@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d126141c6997420b873951ade1529c6, type: 3}
+  m_Name: MenuAudioSet
+  m_EditorClassIdentifier: Assembly-CSharp::GameJam.MenuAudioSet
+  buttonHover:
+    clip: {fileID: 8300000, guid: 72efab9307626408cba6a197711b0493, type: 3}
+    volume: 1
+  buttonClick:
+    clip: {fileID: 8300000, guid: 711f7d98e1c5a43878bca2d3e726af83, type: 3}
+    volume: 1
+  back:
+    clip: {fileID: 8300000, guid: 9bb178b4b099a4fd19798a74e3f2e97f, type: 3}
+    volume: 1
+  screenTransition:
+    clip: {fileID: 8300000, guid: ecd6d3739b2da42fcbcb987cf8b4e697, type: 3}
+    volume: 1
+  characterMove:
+    clip: {fileID: 8300000, guid: 7a167567ce1ab4ec1a214dbda861879a, type: 3}
+    volume: 1
+  characterConfirm:
+    clip: {fileID: 8300000, guid: a33b0ec672493465a93a1de73b9cd759, type: 3}
+    volume: 1
+  characterCancel:
+    clip: {fileID: 8300000, guid: d76cca9348869427399bffe1d2289b0e, type: 3}
+    volume: 1
+  characterUnavailable:
+    clip: {fileID: 8300000, guid: 5d49e197fba3c4100b68bca956246a05, type: 3}
+    volume: 1
+  allPlayersReady:
+    clip: {fileID: 8300000, guid: b7228b1d9e0dc41718edd77232204183, type: 3}
+    volume: 1
+  gameStart:
+    clip: {fileID: 8300000, guid: 41970c06f68a84bf5b46d80c4c82e8db, type: 3}
+    volume: 1
+  menuMusic: {fileID: 0}
+  musicVolume: 0.5
+  effectsVolume: 1

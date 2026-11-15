@@ -10,6 +10,8 @@ namespace GameJam
         [Tooltip("Control scheme from the Input Actions asset on the player prefab's PlayerInput (e.g. Keyboard or Gamepad). Only one player should use Keyboard.")]
         public string controlScheme = "Keyboard";
 
+        [Tooltip("Fallback color. In a normal game a player's color is the color of the character they picked on the character selection " +
+                 "screen (see the Character Roster asset); this one is only used when the game scene is started directly, without the menu.")]
         public Color color = Color.white;
 
         [Tooltip("Optional. Overrides the sprite from the player prefab for this slot.")]
@@ -50,5 +52,16 @@ namespace GameJam
         /// <summary>Control scheme a player uses, taking the test mode into account.</summary>
         public string GetControlScheme(int index) =>
             keyboardTestMode ? keyboardTestSchemes[index] : slots[index].controlScheme;
+
+        /// <summary>
+        /// The color of a player for the whole game (character, trail and territory): the color of the character the player
+        /// picked on the character selection screen or, if the game was started without it (e.g. the game scene was opened
+        /// directly), the color of their slot.
+        /// </summary>
+        public Color GetPlayerColor(int index)
+        {
+            if (GameSession.TryGetSelection(index, out PlayerSelection selection)) return selection.Color;
+            return slots != null && index >= 0 && index < slots.Length ? slots[index].color : Color.white;
+        }
     }
 }
