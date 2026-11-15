@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b7869585aae1542e38abd39a568e82b0, type: 3}
   m_Name: SpeedBoost
   m_EditorClassIdentifier: Assembly-CSharp::GameJam.SpeedBoostModifier
-  displayName: 
-  description: 
-  icon: {fileID: -389863488973964913, guid: 52460d2697325584f905e30c21aa5562, type: 3}
+  displayName: Speed Boost
+  description: +30% movement speed for the next round
+  icon: {fileID: 6962496110692253193, guid: 166ef2aee672c47b59d51326de0422eb, type: 3}
   stackable: 0
   speedBonus: 0.3

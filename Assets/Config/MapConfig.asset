@@ -15,6 +15,6 @@ MonoBehaviour:
   size: {x: 16, y: 9}
   cornerRadius: 0.25
   wallThickness: 1
-  background: {fileID: 8645845537973780955, guid: 005f4c1677f8db34e82c99fcf86af151, type: 3}
-  backgroundTint: {r: 1, g: 1, b: 1, a: 1}
+  background: {fileID: -1955448553306655712, guid: a2332926e9f9e4672a7ab6762cc5c151, type: 3}
+  backgroundTint: {r: 0.16, g: 0.2, b: 0.26, a: 1}
   backgroundSortingOrder: -100

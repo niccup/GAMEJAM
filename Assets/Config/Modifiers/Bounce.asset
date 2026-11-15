@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c499c2820e49243049b234c5466c459c, type: 3}
   m_Name: Bounce
   m_EditorClassIdentifier: Assembly-CSharp::GameJam.BouncePowerUp
-  displayName: 
-  description: 
-  icon: {fileID: -5062943152077355963, guid: 74656c782eb6bf04eafb205817da62f9, type: 3}
+  displayName: Bounce
+  description: Knock other players away when you touch them, for the next round
+  icon: {fileID: 3778404753746887981, guid: bc1655155938e4850b182bdd00ec9e80, type: 3}
   stackable: 0
   bounceStrength: 12
   bounceDuration: 0.7
