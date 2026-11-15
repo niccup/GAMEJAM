@@ -2947,8 +2947,8 @@ MonoBehaviour:
   iconImage: {fileID: 1541238573}
   titleLabel: {fileID: 0}
   detailLabel: {fileID: 0}
-  normalColor: {r: 1, g: 1, b: 0.5803922, a: 1}
-  selectedColor: {r: 0.509434, g: 0.3348091, b: 0.17974368, a: 1}
+  normalColor: {r: 1, g: 1, b: 0.5803922, a: 0.39607844}
+  selectedColor: {r: 0.509434, g: 0.3348091, b: 0.17974368, a: 0.4627451}
   disabledColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!224 &1053200065
 RectTransform:

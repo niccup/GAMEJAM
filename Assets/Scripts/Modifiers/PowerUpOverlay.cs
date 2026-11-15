@@ -46,6 +46,9 @@ namespace GameJam
         [SerializeField] float chipsHeight = 200f;
 
         readonly List<PowerUpOptionView> views = new List<PowerUpOptionView>();
+        IReadOnlyList<OptionData> activeCardOptions;
+        Sprite selectedCardIcon;
+        bool showingSingleSelectedCard;
         int shown;
 
         void Awake()
@@ -65,6 +68,9 @@ namespace GameJam
         public void Close()
         {
             if (panel != null) panel.SetActive(false);
+            activeCardOptions = null;
+            selectedCardIcon = null;
+            showingSingleSelectedCard = false;
             HideOptions();
         }
 
@@ -88,30 +94,62 @@ namespace GameJam
             if (optionTemplate == null || optionsRoot == null) return;
 
             bool chips = layout == OptionsLayout.Chips;
+
+            if (!chips)
+            {
+                activeCardOptions = options;
+                showingSingleSelectedCard = false;
+                if (options != null && selected >= 0 && selected < options.Count)
+                    selectedCardIcon = options[selected].Icon != null ? options[selected].Icon : placeholderIcon;
+            }
+            else
+            {
+                activeCardOptions = null;
+                showingSingleSelectedCard = selectedCardIcon != null;
+            }
+
+            IReadOnlyList<OptionData> displayOptions = options;
+            int displaySelected = selected;
+
+            if (showingSingleSelectedCard)
+            {
+                displayOptions = new[]
+                {
+                    new OptionData
+                    {
+                        Icon = selectedCardIcon,
+                        Title = string.Empty,
+                        Detail = string.Empty,
+                        Enabled = true
+                    }
+                };
+                displaySelected = 0;
+            }
+
             float scale = chips ? chipScale : 1f;
             var templateRect = (RectTransform)optionTemplate.transform;
 
             // Shrink the whole row so it fits the screen, whatever its resolution or aspect ratio (canvas units).
             float screenWidth = panel != null ? ((RectTransform)panel.transform).rect.width : 0f;
             if (screenWidth <= 0f) screenWidth = ((RectTransform)transform).rect.width;
-            if (screenWidth > 0f && options.Count > 0)
+            if (screenWidth > 0f && displayOptions.Count > 0)
             {
-                float rowAtFullScale = options.Count * templateRect.sizeDelta.x + (options.Count - 1) * spacing;
+                float rowAtFullScale = displayOptions.Count * templateRect.sizeDelta.x + (displayOptions.Count - 1) * spacing;
                 scale = Mathf.Min(scale, screenWidth * maxRowWidth / rowAtFullScale);
             }
 
             float width = templateRect.sizeDelta.x * scale;
             float gap = spacing * scale;
-            float total = options.Count * width + (options.Count - 1) * gap;
+            float total = displayOptions.Count * width + (displayOptions.Count - 1) * gap;
 
             optionsRoot.anchorMin = optionsRoot.anchorMax = optionsRoot.pivot = new Vector2(0.5f, chips ? 0f : 0.5f);
             optionsRoot.anchoredPosition = new Vector2(0f, chips ? chipsHeight : 0f);
 
-            while (views.Count < options.Count) views.Add(Instantiate(optionTemplate, optionsRoot));
+            while (views.Count < displayOptions.Count) views.Add(Instantiate(optionTemplate, optionsRoot));
 
             for (int i = 0; i < views.Count; i++)
             {
-                bool used = i < options.Count;
+                bool used = i < displayOptions.Count;
                 views[i].gameObject.SetActive(used);
                 if (!used) continue;
 
@@ -120,15 +158,24 @@ namespace GameJam
                 rect.sizeDelta = templateRect.sizeDelta;
                 rect.localScale = Vector3.one * scale;
                 rect.anchoredPosition = new Vector2(-total * 0.5f + width * 0.5f + i * (width + gap), 0f);
-                views[i].Set(options[i]);
+                views[i].Set(displayOptions[i]);
             }
 
-            shown = options.Count;
-            SetSelected(selected);
+            shown = displayOptions.Count;
+            SetSelected(displaySelected);
         }
 
         public void SetSelected(int selected)
         {
+            if (activeCardOptions != null && selected >= 0 && selected < activeCardOptions.Count)
+                selectedCardIcon = activeCardOptions[selected].Icon != null ? activeCardOptions[selected].Icon : placeholderIcon;
+
+            if (showingSingleSelectedCard)
+            {
+                if (shown > 0) views[0].SetSelected(true);
+                return;
+            }
+
             for (int i = 0; i < shown; i++) views[i].SetSelected(i == selected);
         }
 
