@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d14071bc523d4c6e9f4b5e2a330aa6e, type: 3}
   m_Name: Mirror
   m_EditorClassIdentifier: Assembly-CSharp::GameJam.MirrorPowerUp
-  displayName: 
-  description: 
+  displayName: Mirror
+  description: 77877676
   icon: {fileID: -2519989943963949265, guid: 8257569dcaec8af499a6875486b1eff7, type: 3}
   postMirrorPreview: 1
   previewSpeed: 30
