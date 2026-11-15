@@ -40,7 +40,7 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 872920e2ea87edc43b6e526ecbbb18d6, type: 3}
     volume: 1
   gameStart:
-    clip: {fileID: 8300000, guid: 41970c06f68a84bf5b46d80c4c82e8db, type: 3}
+    clip: {fileID: 0}
     volume: 1
   menuMusic: {fileID: 8300000, guid: 93278eeb3ec74934eb8a387da11ec489, type: 3}
   musicVolume: 0.5
