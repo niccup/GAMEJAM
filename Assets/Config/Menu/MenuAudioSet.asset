@@ -13,22 +13,22 @@ MonoBehaviour:
   m_Name: MenuAudioSet
   m_EditorClassIdentifier: Assembly-CSharp::GameJam.MenuAudioSet
   buttonHover:
-    clip: {fileID: 8300000, guid: 72efab9307626408cba6a197711b0493, type: 3}
-    volume: 1
+    clip: {fileID: 8300000, guid: dab74b1f7977586498a0f0729d34001b, type: 3}
+    volume: 0.727
   buttonClick:
-    clip: {fileID: 8300000, guid: 711f7d98e1c5a43878bca2d3e726af83, type: 3}
+    clip: {fileID: 8300000, guid: c8cf7d577573776429c4023524147d46, type: 3}
     volume: 1
   back:
-    clip: {fileID: 8300000, guid: 9bb178b4b099a4fd19798a74e3f2e97f, type: 3}
+    clip: {fileID: 8300000, guid: dab74b1f7977586498a0f0729d34001b, type: 3}
     volume: 1
   screenTransition:
-    clip: {fileID: 8300000, guid: ecd6d3739b2da42fcbcb987cf8b4e697, type: 3}
+    clip: {fileID: 8300000, guid: 36a24c9fc63eb434e82d08c01d3c7ea0, type: 3}
     volume: 1
   characterMove:
-    clip: {fileID: 8300000, guid: 7a167567ce1ab4ec1a214dbda861879a, type: 3}
+    clip: {fileID: 8300000, guid: dab74b1f7977586498a0f0729d34001b, type: 3}
     volume: 1
   characterConfirm:
-    clip: {fileID: 8300000, guid: a33b0ec672493465a93a1de73b9cd759, type: 3}
+    clip: {fileID: 8300000, guid: c8cf7d577573776429c4023524147d46, type: 3}
     volume: 1
   characterCancel:
     clip: {fileID: 8300000, guid: d76cca9348869427399bffe1d2289b0e, type: 3}
@@ -37,11 +37,11 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 5d49e197fba3c4100b68bca956246a05, type: 3}
     volume: 1
   allPlayersReady:
-    clip: {fileID: 8300000, guid: b7228b1d9e0dc41718edd77232204183, type: 3}
+    clip: {fileID: 8300000, guid: 872920e2ea87edc43b6e526ecbbb18d6, type: 3}
     volume: 1
   gameStart:
     clip: {fileID: 8300000, guid: 41970c06f68a84bf5b46d80c4c82e8db, type: 3}
     volume: 1
-  menuMusic: {fileID: 0}
+  menuMusic: {fileID: 8300000, guid: 93278eeb3ec74934eb8a387da11ec489, type: 3}
   musicVolume: 0.5
   effectsVolume: 1
