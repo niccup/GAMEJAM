@@ -18,18 +18,18 @@ MonoBehaviour:
   yellow: {r: 1, g: 0.84, b: 0.12, a: 1}
   characters:
   - displayName: 
-    portrait: {fileID: -855298285791758126, guid: 0cdb6f6b9ca6e0e4cad5b24536ddd143, type: 3}
+    portrait: {fileID: -3503037176013327163, guid: 0791601dfdcbb354eb6e95eaf8a2a16b, type: 3}
     unavailablePortrait: {fileID: 0}
     color: 0
   - displayName: 
-    portrait: {fileID: 6937817954938267909, guid: 5539594df1f50e845ae46e6a3bd1832e, type: 3}
+    portrait: {fileID: 6630722033017582175, guid: fbcd3967de8afdb48b9c038fbe3fb751, type: 3}
     unavailablePortrait: {fileID: 0}
     color: 1
   - displayName: 
-    portrait: {fileID: -6470460504253458178, guid: 5206a8f338881014c840f46efc0da637, type: 3}
+    portrait: {fileID: 227866211751721756, guid: 9de1f652280100a4b9ad786b3447ed5a, type: 3}
     unavailablePortrait: {fileID: 0}
     color: 2
   - displayName: 
-    portrait: {fileID: -4178046375966092550, guid: 35b83003cafa956408030debd7b7d253, type: 3}
+    portrait: {fileID: -31781469285622549, guid: 43427b270ec30b44aac8ec67c5a659f7, type: 3}
     unavailablePortrait: {fileID: 0}
     color: 3
