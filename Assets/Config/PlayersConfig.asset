@@ -27,7 +27,7 @@ MonoBehaviour:
     minimumMovementSpeed: 0.05
     scaleWithSpeedBoost: 1
   slots:
-  - controlScheme: Keyboard
+  - controlScheme: Gamepad
     color: {r: 1, g: 1, b: 1, a: 1}
     spriteOverride: {fileID: 4159916404999561967, guid: 0cf577c97eb42774385617c07f2e399a, type: 3}
   - controlScheme: Gamepad
